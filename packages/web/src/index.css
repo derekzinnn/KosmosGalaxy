@@ -1,0 +1,159 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import '@fontsource-variable/inter';
+
+/*
+ * ═══════════════════════════════════════════════════════════════════════════
+ *  Kosmos Galaxy — design tokens
+ *
+ *  Everything visual in this product resolves to a value defined here.
+ *  Components never hard-code a colour, a radius or a shadow, so the whole
+ *  product can be re-themed from this one file and later phases cannot drift.
+ *
+ *  Direction: calm, quiet, generous with space. One accent colour, used
+ *  sparingly enough that it always means "this is the thing to do next".
+ *  Our clients are business owners, not power users — a screen that needs
+ *  explaining is a screen we got wrong.
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* ── Surfaces ────────────────────────────────────────────────────────── */
+  --background: oklch(0.994 0.002 264);
+  --foreground: oklch(0.21 0.015 264);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.21 0.015 264);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.21 0.015 264);
+
+  /*
+   * The one accent. A deep indigo that reads as "Kosmos" without shouting.
+   * If it appears more than twice on a screen, the screen is too busy.
+   */
+  --primary: oklch(0.53 0.2 274);
+  --primary-foreground: oklch(0.99 0.002 264);
+
+  --secondary: oklch(0.968 0.004 264);
+  --secondary-foreground: oklch(0.28 0.015 264);
+
+  --muted: oklch(0.968 0.004 264);
+  --muted-foreground: oklch(0.53 0.015 264);
+
+  --accent: oklch(0.96 0.012 274);
+  --accent-foreground: oklch(0.35 0.09 274);
+
+  --destructive: oklch(0.58 0.21 27);
+  --destructive-foreground: oklch(0.99 0.002 264);
+
+  --success: oklch(0.62 0.14 152);
+  --success-foreground: oklch(0.99 0.002 264);
+
+  --border: oklch(0.922 0.006 264);
+  --input: oklch(0.922 0.006 264);
+  --ring: oklch(0.53 0.2 274);
+
+  /* ── Shape ───────────────────────────────────────────────────────────── */
+  --radius: 0.625rem;
+}
+
+.dark {
+  --background: oklch(0.17 0.012 264);
+  --foreground: oklch(0.96 0.004 264);
+  --card: oklch(0.21 0.014 264);
+  --card-foreground: oklch(0.96 0.004 264);
+  --popover: oklch(0.21 0.014 264);
+  --popover-foreground: oklch(0.96 0.004 264);
+
+  --primary: oklch(0.7 0.16 274);
+  --primary-foreground: oklch(0.17 0.012 264);
+
+  --secondary: oklch(0.26 0.014 264);
+  --secondary-foreground: oklch(0.96 0.004 264);
+
+  --muted: oklch(0.26 0.014 264);
+  --muted-foreground: oklch(0.7 0.014 264);
+
+  --accent: oklch(0.28 0.03 274);
+  --accent-foreground: oklch(0.88 0.06 274);
+
+  --destructive: oklch(0.65 0.19 27);
+  --destructive-foreground: oklch(0.17 0.012 264);
+
+  --success: oklch(0.7 0.14 152);
+  --success-foreground: oklch(0.17 0.012 264);
+
+  --border: oklch(0.3 0.014 264);
+  --input: oklch(0.32 0.014 264);
+  --ring: oklch(0.7 0.16 274);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/40;
+  }
+
+  body {
+    @apply bg-background font-sans text-foreground antialiased;
+    /* Inter's default figures are proportional; tabular ones stop numbers
+       jittering as progress counters tick upward in later phases. */
+    font-feature-settings: 'cv11', 'ss01';
+    text-rendering: optimizeLegibility;
+  }
+
+  /*
+   * Focus is never removed, only restyled. Some of our clients navigate by
+   * keyboard, and an invisible focus ring makes the product unusable for them.
+   */
+  :focus-visible {
+    @apply ring-2 ring-ring/60 ring-offset-2 ring-offset-background outline-none;
+  }
+
+  ::selection {
+    @apply bg-primary/15;
+  }
+}
+
+@layer components {
+  /*
+   * The quiet cosmos wash behind the sign-in screens. Barely visible on
+   * purpose — atmosphere, not decoration.
+   */
+  .auth-backdrop {
+    background-image:
+      radial-gradient(60rem 40rem at 50% -10%, var(--accent), transparent 60%),
+      radial-gradient(40rem 30rem at 110% 10%, oklch(0.95 0.03 300 / 0.5), transparent 65%);
+  }
+}

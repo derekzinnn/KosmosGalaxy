@@ -1,0 +1,316 @@
+// ═══════════════════════════════════════════════════════════════════════
+//  Kosmos Galaxy — Phase 0 Prisma schema
+//
+//  Conventions
+//  - Tables are snake_case + plural; columns snake_case (@map / @@map).
+//    Reason: we write raw SQL for the audit-log triggers, and these tables
+//    are read directly in the Supabase dashboard. PascalCase forces quoting.
+//  - IDs are UUIDv7: unguessable, but time-ordered, so inserts stay at the
+//    right-hand edge of the primary key index instead of splitting pages.
+//    Exception: WatchEvent uses a BigInt sequence — it is the only table that
+//    grows without bound, and its rows are never addressed individually.
+//  - `order` fields map to the column `sort_order`. ORDER is a reserved SQL
+//    keyword and would need quoting in every hand-written query.
+//  - Two invariants are enforced by the database, not by application code.
+//    See prisma/migrations/*_phase0_guarantees/migration.sql:
+//      1. audit_logs rejects UPDATE and DELETE (append-only).
+//      2. users.role = SUPERADMIN if and only if tenant_id IS NULL.
+// ═══════════════════════════════════════════════════════════════════════
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Tenancy & identity ────────────────────────────────────────────────
+
+enum TenantStatus {
+  ONBOARDING
+  ACTIVE
+  SUSPENDED
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum Role {
+  SUPERADMIN
+  CLIENT_OWNER
+  CLIENT_MEMBER
+}
+
+model Tenant {
+  id               String       @id @default(uuid(7))
+  name             String
+  slug             String       @unique
+  status           TenantStatus @default(ONBOARDING)
+  contractSignedAt DateTime?    @map("contract_signed_at")
+  createdAt        DateTime     @default(now()) @map("created_at")
+  updatedAt        DateTime     @updatedAt @map("updated_at")
+
+  users            User[]
+  invitations      Invitation[]
+  trackAssignments TrackAssignment[]
+  lessonProgress   LessonProgress[]
+  watchEvents      WatchEvent[]
+
+  @@index([status])
+  @@map("tenants")
+}
+
+model User {
+  id           String     @id @default(uuid(7))
+  tenantId     String?    @map("tenant_id")
+  email        String     @unique
+  passwordHash String     @map("password_hash")
+  name         String
+  role         Role
+  status       UserStatus @default(ACTIVE)
+  lastLoginAt  DateTime?  @map("last_login_at")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  refreshTokens       RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
+  invitationsSent     Invitation[]         @relation("InvitationInvitedBy")
+  invitationAccepted  Invitation?          @relation("InvitationAcceptedBy")
+  lessonProgress      LessonProgress[]
+  watchEvents         WatchEvent[]
+  tracksAssigned      TrackAssignment[]    @relation("TrackAssignmentAssignedBy")
+
+  @@index([tenantId])
+  @@index([tenantId, role])
+  @@map("users")
+}
+
+model Invitation {
+  id        String    @id @default(uuid(7))
+  tenantId  String?   @map("tenant_id")
+  email     String
+  role      Role
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  acceptedAt DateTime? @map("accepted_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  invitedByUserId String? @map("invited_by_user_id")
+  acceptedByUserId String? @unique @map("accepted_by_user_id")
+
+  tenant         Tenant? @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  invitedBy      User?   @relation("InvitationInvitedBy", fields: [invitedByUserId], references: [id], onDelete: SetNull)
+  acceptedByUser User?   @relation("InvitationAcceptedBy", fields: [acceptedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([email])
+  @@index([expiresAt])
+  @@map("invitations")
+}
+
+model RefreshToken {
+  id         String    @id @default(uuid(7))
+  userId     String    @map("user_id")
+  familyId   String    @map("family_id")
+  tokenHash  String    @unique @map("token_hash")
+  expiresAt  DateTime  @map("expires_at")
+  revokedAt  DateTime? @map("revoked_at")
+  replacedByTokenId String? @map("replaced_by_token_id")
+  userAgent  String?   @map("user_agent")
+  ip         String?
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([familyId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid(7))
+  userId    String    @map("user_id")
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  ip        String?
+  userAgent String?   @map("user_agent")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
+}
+
+// ─── Content (schema now, CRUD in Phase 1) ─────────────────────────────
+
+enum ResourceType {
+  FILE
+  LINK
+}
+
+model Track {
+  id          String   @id @default(uuid(7))
+  slug        String   @unique
+  title       String
+  description String?
+  published   Boolean  @default(false)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  modules     Module[]
+  assignments TrackAssignment[]
+
+  @@index([published])
+  @@map("tracks")
+}
+
+model Module {
+  id          String   @id @default(uuid(7))
+  trackId     String   @map("track_id")
+  title       String
+  description String?
+  order       Int      @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  track   Track    @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  lessons Lesson[]
+
+  @@unique([trackId, order])
+  @@index([trackId])
+  @@map("modules")
+}
+
+model Lesson {
+  id              String   @id @default(uuid(7))
+  moduleId        String   @map("module_id")
+  title           String
+  description     String?
+  order           Int      @map("sort_order")
+  bunnyVideoId    String?  @map("bunny_video_id")
+  durationSeconds Int?     @map("duration_seconds")
+  isRequired      Boolean  @default(true) @map("is_required")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  module    Module           @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  resources Resource[]
+  progress  LessonProgress[]
+  watchEvents WatchEvent[]
+
+  @@unique([moduleId, order])
+  @@index([moduleId])
+  @@map("lessons")
+}
+
+model Resource {
+  id            String       @id @default(uuid(7))
+  lessonId      String       @map("lesson_id")
+  type          ResourceType
+  title         String
+  url           String
+  fileSizeBytes Int?         @map("file_size_bytes")
+  order         Int          @map("sort_order")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@index([lessonId])
+  @@map("resources")
+}
+
+model TrackAssignment {
+  id               String    @id @default(uuid(7))
+  trackId          String    @map("track_id")
+  tenantId         String    @map("tenant_id")
+  assignedByUserId String?   @map("assigned_by_user_id")
+  dueAt            DateTime? @map("due_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  track      Track  @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  tenant     Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  assignedBy User?  @relation("TrackAssignmentAssignedBy", fields: [assignedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([trackId, tenantId])
+  @@index([tenantId])
+  @@map("track_assignments")
+}
+
+// ─── Progress (schema now, logic in Phase 2) ───────────────────────────
+
+model LessonProgress {
+  id                  String    @id @default(uuid(7))
+  userId              String    @map("user_id")
+  lessonId            String    @map("lesson_id")
+  tenantId            String    @map("tenant_id")
+  maxPositionSeconds  Int       @default(0) @map("max_position_seconds")
+  totalWatchedSeconds Int       @default(0) @map("total_watched_seconds")
+  startedAt           DateTime  @default(now()) @map("started_at")
+  completedAt         DateTime? @map("completed_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@index([tenantId])
+  @@index([lessonId])
+  @@index([tenantId, completedAt])
+  @@map("lesson_progress")
+}
+
+model WatchEvent {
+  id              BigInt   @id @default(autoincrement())
+  userId          String   @map("user_id")
+  lessonId        String   @map("lesson_id")
+  tenantId        String   @map("tenant_id")
+  positionSeconds Int      @map("position_seconds")
+  ip              String?
+  userAgent       String?  @map("user_agent")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([userId, lessonId, createdAt])
+  @@index([tenantId, createdAt])
+  @@map("watch_events")
+}
+
+// ─── Audit (append-only, no FKs by design) ─────────────────────────────
+
+model AuditLog {
+  id           String   @id @default(uuid(7))
+  actorUserId  String?  @map("actor_user_id")
+  actorEmail   String?  @map("actor_email")
+  actorRole    Role?    @map("actor_role")
+  tenantId     String?  @map("tenant_id")
+  action       String
+  entityType   String?  @map("entity_type")
+  entityId     String?  @map("entity_id")
+  before       Json?
+  after        Json?
+  ip           String?
+  userAgent    String?  @map("user_agent")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId, createdAt])
+  @@index([actorUserId, createdAt])
+  @@index([action, createdAt])
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}

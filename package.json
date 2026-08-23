@@ -1,0 +1,41 @@
+{
+  "name": "kosmos-galaxy",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Client onboarding platform for Kosmos Inteligencia Digital",
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n api,web -c cyan,magenta \"npm:dev:api\" \"npm:dev:web\"",
+    "dev:api": "npm run dev --workspace @kosmos/api",
+    "dev:web": "npm run dev --workspace @kosmos/web",
+    "build": "npm run build --workspace @kosmos/api && npm run build --workspace @kosmos/web",
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:migrate": "npm run db:migrate --workspace @kosmos/api",
+    "db:seed": "npm run db:seed --workspace @kosmos/api",
+    "db:studio": "npm run db:studio --workspace @kosmos/api"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "concurrently": "10.0.5",
+    "eslint": "10.9.0",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "eslint-plugin-react-refresh": "0.5.4",
+    "globals": "17.11.0",
+    "prettier": "3.9.6",
+    "prettier-plugin-tailwindcss": "0.8.1",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.67.0"
+  }
+}

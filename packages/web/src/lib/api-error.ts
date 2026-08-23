@@ -1,0 +1,79 @@
+/**
+ * The API speaks in stable English codes; the product speaks Portuguese.
+ * This file is the only place the two meet, which means the backend never has
+ * to know what language a client reads, and copy changes never touch it.
+ */
+export class ApiError extends Error {
+  constructor(
+    readonly code: string,
+    readonly status: number,
+    message: string,
+    readonly details?: unknown,
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
+const MESSAGES: Readonly<Record<string, string>> = {
+  INVALID_CREDENTIALS: 'E-mail ou senha incorretos.',
+  ACCOUNT_INACTIVE: 'Sua conta está inativa. Fale com a equipe Kosmos.',
+  RATE_LIMITED: 'Muitas tentativas seguidas. Aguarde alguns minutos e tente de novo.',
+  VALIDATION_FAILED: 'Confira os campos destacados e tente novamente.',
+
+  TOKEN_MISSING: 'Sua sessão expirou. Entre novamente.',
+  TOKEN_INVALID: 'Sua sessão expirou. Entre novamente.',
+  REFRESH_TOKEN_MISSING: 'Sua sessão expirou. Entre novamente.',
+  REFRESH_TOKEN_INVALID: 'Sua sessão expirou. Entre novamente.',
+  REFRESH_TOKEN_EXPIRED: 'Sua sessão expirou. Entre novamente.',
+  REFRESH_TOKEN_REUSED:
+    'Detectamos um acesso suspeito e encerramos esta sessão por segurança. Entre novamente.',
+
+  RESET_TOKEN_INVALID: 'Este link de redefinição expirou ou já foi usado. Peça um novo.',
+  INVITATION_INVALID: 'Este convite não é mais válido. Peça um novo para a equipe Kosmos.',
+  INVITATION_USED: 'Este convite já foi utilizado.',
+  USER_ALREADY_EXISTS: 'Este e-mail já tem uma conta. Faça login para continuar.',
+
+  ROLE_NOT_INVITABLE: 'Você não pode enviar um convite com esse nível de acesso.',
+  INSUFFICIENT_ROLE: 'Você não tem permissão para acessar esta área.',
+  FORBIDDEN: 'Você não tem permissão para esta ação.',
+  FORBIDDEN_SCOPE: 'Você não tem permissão para acessar estes dados.',
+
+  TENANT_NOT_FOUND: 'Não encontramos esta empresa.',
+  TENANT_SLUG_TAKEN: 'Já existe uma empresa com este identificador.',
+  ROUTE_NOT_FOUND: 'Não encontramos o que você procura.',
+
+  NETWORK_ERROR: 'Não conseguimos falar com o servidor. Verifique sua conexão e tente de novo.',
+};
+
+const FALLBACK = 'Algo não saiu como esperado. Tente novamente em alguns instantes.';
+
+export function messageFor(error: unknown): string {
+  if (error instanceof ApiError) {
+    return MESSAGES[error.code] ?? FALLBACK;
+  }
+  return FALLBACK;
+}
+
+/** Field-level messages, already in Portuguese, straight from the API schema. */
+export function fieldErrorsFrom(error: unknown): Record<string, string> {
+  if (!(error instanceof ApiError) || error.code !== 'VALIDATION_FAILED') return {};
+
+  const details = error.details;
+  if (!Array.isArray(details)) return {};
+
+  const fields: Record<string, string> = {};
+
+  for (const item of details as unknown[]) {
+    if (typeof item !== 'object' || item === null) continue;
+
+    const { field, message } = item as { field?: unknown; message?: unknown };
+
+    if (typeof field === 'string' && typeof message === 'string') {
+      // First message per field wins, so the form shows the primary reason.
+      fields[field] ??= message;
+    }
+  }
+
+  return fields;
+}

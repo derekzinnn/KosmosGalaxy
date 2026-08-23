@@ -1,0 +1,6 @@
+node_modules
+dist
+coverage
+packages/api/src/generated
+packages/api/prisma/migrations
+package-lock.json
