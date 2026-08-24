@@ -13,8 +13,8 @@ in, who watched what, who is stuck and who has not started.
 | Phase       | Scope                                                                         | State       |
 | ----------- | ----------------------------------------------------------------------------- | ----------- |
 | **Phase 0** | Monorepo, database schema, auth, invitations, RBAC, audit log                 | ✅ **Done** |
-| Phase 1     | Course content model + admin CRUD for tracks, modules, lessons                | Next        |
-| Phase 2     | Bunny Stream, signed playback, player, heartbeat telemetry, sequential unlock | Not started |
+| **Phase 1** | Course content CRUD, ordering, publishing, track assignment                   | ✅ **Done** |
+| Phase 2     | Bunny Stream, signed playback, player, heartbeat telemetry, sequential unlock | Next        |
 | Phase 3     | Client-facing classroom UI and progress experience                            | Not started |
 | Phase 4     | Admin console: onboarding funnel, per-client drill-down, audit viewer         | Not started |
 
@@ -111,9 +111,19 @@ override the codebase can perform.
 
 - **Nested reads inherit their parent's scope.** A query on an unscoped model
   that includes a scoped relation (`track.findMany({ include: { assignments: …
-} })`) is not checked, because Prisma reports it as one operation. No such
-  query exists today. PostgreSQL row-level security is the defence-in-depth
-  answer and is deliberately deferred — it needs a separate database role.
+} })`) is not checked, because Prisma reports it as one operation.
+
+  Phase 1 is where this first mattered. A client's tracks could have been read
+  as `track.findMany({ where: { assignments: { some: { tenantId } } } })` —
+  correct today, and silently every client's tracks the day somebody edits that
+  filter, because the guard never sees it. Instead the query runs from the
+  guarded side: `trackAssignment.findMany({ include: { track: … } })`.
+  `TrackAssignment` carries the tenant column, so the filter is checked.
+  **Read a client's content through the assignment, never through the track.**
+
+  PostgreSQL row-level security is the defence-in-depth answer and is
+  deliberately deferred — it needs a separate database role.
+
 - **Writes must set the scalar foreign key.** A nested `connect` is invisible to
   the guard; the error message says so when it fires.
 
@@ -157,6 +167,12 @@ Actions recorded in Phase 0: `USER_LOGIN_SUCCEEDED`, `USER_LOGIN_FAILED`,
 `USER_REACTIVATED`, `TENANT_CREATED`, `INVITATION_SENT`, `INVITATION_ACCEPTED`,
 `INVITATION_REVOKED`, `PASSWORD_RESET_REQUESTED`, `PASSWORD_RESET_COMPLETED`,
 `REFRESH_TOKEN_REUSE_DETECTED`, `TENANT_SCOPE_OVERRIDDEN`.
+
+Added in Phase 1: `TRACK_CREATED`, `TRACK_UPDATED`, `TRACK_DELETED`,
+`TRACK_PUBLISHED`, `TRACK_UNPUBLISHED`, `TRACK_ASSIGNED`, `TRACK_UNASSIGNED`,
+`MODULE_CREATED`, `MODULE_UPDATED`, `MODULE_DELETED`, `MODULES_REORDERED`,
+`LESSON_CREATED`, `LESSON_UPDATED`, `LESSON_DELETED`, `LESSONS_REORDERED`,
+`RESOURCE_CREATED`, `RESOURCE_DELETED`.
 
 ---
 
@@ -265,6 +281,19 @@ messages and identifiers are **English**.
 | `CLIENT_OWNER` invite rights  | **`CLIENT_MEMBER` only**               | Promoting someone to account owner is a decision about the commercial relationship, so it stays with Kosmos. One line in `INVITABLE_ROLES` if you disagree                                                        |
 | Email vendor                  | **Deferred**                           | `EmailProvider` interface with a console implementation. Choosing Resend/SES/Postmark later is one new file and one line in the factory                                                                           |
 
+### Decisions taken in Phase 1
+
+| Decision                 | Choice                                           | Why                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ------------------------ | ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Reordering               | **Full ordered list, applied in two passes**     | `@@unique([trackId, order])` refuses two rows at one position even momentarily, and a Prisma `@@unique` is a plain index, checked per statement rather than deferred to commit. Every row is parked in negative space first, where nothing collides, then written to 0..n-1. Sending the whole list, rather than "move item 3 up", also makes a stale client view detectable — a set that does not match exactly what exists is rejected |
+| Slugs                    | **Derived from the title, made unique**          | One less field to fill in. An explicitly supplied slug is never silently altered: a shared link that changes underneath is worse than a rejected request                                                                                                                                                                                                                                                                                 |
+| Publishing               | **Validated, and reports every problem at once** | A track a client cannot finish is worse than one they cannot start. Empty track, empty module, and a required lesson with no video all block publication, and the endpoint returns the whole list so the fix is one pass rather than a game of whack-a-mole. `GET /tracks/:id/readiness` answers the same question without attempting to publish                                                                                         |
+| Deleting content         | **Blocked when it would erase history**          | A published or assigned track cannot be deleted, and neither can a lesson or module a client has already started — the schema cascades to `LessonProgress`, so a careless click would silently erase what someone watched. The guard is in place now even though Phase 2 writes the first such row                                                                                                                                       |
+| Route shape              | **`/modules/:id`, not `/tracks/:t/modules/:m`**  | Ids are unique, so the ancestry in a URL adds nothing except a second source of truth that can disagree with the database                                                                                                                                                                                                                                                                                                                |
+| `bunnyVideoId` exposure  | **Staff only; clients get `hasVideo`**           | Phase 2 serves playback through a signed URL. A raw video id reaching a client browser now would make that pointless later, so the client mapper never includes it                                                                                                                                                                                                                                                                       |
+| Client-facing reads      | **Through `TrackAssignment`**                    | See **Known limits**. The guarded side of the relation is the only side that can be checked                                                                                                                                                                                                                                                                                                                                              |
+| A minimal Clients screen | **Added, though the console is Phase 4**         | Without a way to create a company and invite its owner, the assign dropdown is permanently empty and Phase 1 cannot be used at all. The funnel, drill-down and audit viewer remain Phase 4                                                                                                                                                                                                                                               |
+
 ### Things flagged as risky
 
 - **Per-email rate limiting is a lockout weapon.** Anyone who knows a client's
@@ -333,14 +362,21 @@ npm test --workspace @kosmos/api            # integration tests, needs Postgres
 npm test --workspace @kosmos/web            # component and unit tests
 ```
 
-**85 API tests** run against a real PostgreSQL database — migrations included, so
-the triggers and CHECK constraints under test are the real ones. Tests run
+**132 API tests** run against a real PostgreSQL database — migrations included,
+so the triggers and CHECK constraints under test are the real ones. Tests run
 single-worker because they truncate between cases.
 
 **The tenant isolation suite is the definition of done for Phase 0.** It proves a
 `CLIENT_OWNER` from Tenant A cannot read, update or delete anything belonging to
 Tenant B, including by knowing the exact target id, through the HTTP API and by
 calling the data layer directly.
+
+`content-isolation.test.ts` is the Phase 1 counterpart to the Phase 0 suite. The
+library is shared on purpose — one Track row, many companies — so the question
+is not "can Alfa read Beta's track?" but "can Alfa discover that Beta was given
+anything at all?". It proves a client sees only their own assignments, only
+published ones, never the Bunny video id, and cannot reach an authoring endpoint
+even for a track they legitimately have.
 
 **20 web tests** cover the error-copy mapping, the login form, the route guard,
 and refresh serialisation.
@@ -349,12 +385,21 @@ and refresh serialisation.
 
 ## Notes for the next phase
 
-Phase 1 adds admin CRUD for tracks, modules and lessons. Two things to know
-before starting:
+Phase 2 adds Bunny Stream, signed playback, the player, heartbeat telemetry and
+sequential unlock. What Phase 1 already put in place for it:
 
-- `Track`, `Module`, `Lesson` and `Resource` are **Kosmos-global content**, not
-  tenant-scoped. A tenant's access is derived through `TrackAssignment`. They are
-  deliberately absent from the guard's model map — when Phase 1 adds queries that
-  traverse from a track to its assignments, re-read **Known limits** above first.
-- `Lesson.bunnyVideoId` is nullable so a lesson can be authored before its video
-  exists. Publishing a track should validate that every required lesson has one.
+- **`bunnyVideoId` never leaves the API for a client.** `toPublicLesson` sends
+  `hasVideo: boolean` instead. Phase 2 should add an endpoint that mints a
+  short-lived signed URL per lesson, checked against the caller's assignment —
+  not one that hands over the id.
+- **Deleting content that has progress is already blocked.** `LESSON_HAS_PROGRESS`
+  and `MODULE_HAS_PROGRESS` fire today against a `LessonProgress` table nothing
+  writes yet. Once heartbeats land, those guards start doing real work.
+- **`LessonProgress` and `WatchEvent` carry a denormalised `tenantId`** and are
+  both in the guard's model map, so every progress query must be scoped. Writes
+  must set the scalar `tenantId`, not reach it through a nested `connect`.
+- **Sequential unlock needs an order that is trustworthy.** Positions are kept
+  contiguous 0..n-1: appends take max+1, deletes renumber, and reorders rewrite
+  the whole list. Code may rely on that.
+- **`durationSeconds` is authored by hand today.** Bunny reports the real
+  duration; Phase 2 should fill it from the API rather than trusting the form.

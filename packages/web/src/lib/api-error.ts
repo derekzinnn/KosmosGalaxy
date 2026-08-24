@@ -40,6 +40,21 @@ const MESSAGES: Readonly<Record<string, string>> = {
   FORBIDDEN_SCOPE: 'Você não tem permissão para acessar estes dados.',
 
   TENANT_NOT_FOUND: 'Não encontramos esta empresa.',
+
+  TRACK_NOT_FOUND: 'Não encontramos esta trilha.',
+  TRACK_SLUG_TAKEN: 'Já existe uma trilha com este endereço.',
+  TRACK_NOT_READY: 'A trilha ainda não está pronta para ser publicada.',
+  TRACK_PUBLISHED_CANNOT_DELETE: 'Despublique a trilha antes de excluí-la.',
+  TRACK_ASSIGNED_CANNOT_DELETE: 'Esta trilha já foi liberada para pelo menos um cliente.',
+  MODULE_NOT_FOUND: 'Não encontramos este módulo.',
+  MODULE_HAS_PROGRESS: 'Algum cliente já começou as aulas deste módulo.',
+  MODULE_ORDER_MISMATCH: 'A lista de módulos mudou. Recarregue a página e tente de novo.',
+  LESSON_NOT_FOUND: 'Não encontramos esta aula.',
+  LESSON_HAS_PROGRESS: 'Algum cliente já começou esta aula.',
+  LESSON_ORDER_MISMATCH: 'A lista de aulas mudou. Recarregue a página e tente de novo.',
+  RESOURCE_NOT_FOUND: 'Não encontramos este material.',
+  ALREADY_ASSIGNED: 'Esta trilha já está liberada para este cliente.',
+  NOT_ASSIGNED: 'Esta trilha não está liberada para este cliente.',
   TENANT_SLUG_TAKEN: 'Já existe uma empresa com este identificador.',
   ROUTE_NOT_FOUND: 'Não encontramos o que você procura.',
 

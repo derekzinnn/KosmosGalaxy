@@ -5,6 +5,9 @@ import { RedirectIfAuthenticated, RequireAuth } from '@/auth/RequireAuth';
 import { AppShell } from '@/components/AppShell';
 import { RootErrorBoundary } from '@/components/RootErrorBoundary';
 import { AcceptInvitePage } from '@/pages/AcceptInvitePage';
+import { ClientsPage } from '@/pages/admin/ClientsPage';
+import { TrackEditorPage } from '@/pages/admin/TrackEditorPage';
+import { TracksPage } from '@/pages/admin/TracksPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
 import { LoginPage } from '@/pages/LoginPage';
@@ -45,6 +48,13 @@ export function App() {
               <Route element={<RequireAuth />}>
                 <Route element={<AppShell />}>
                   <Route path="/" element={<DashboardPage />} />
+
+                  {/* Authoring is Kosmos-only; the guard sends anyone else home. */}
+                  <Route element={<RequireAuth allow={['SUPERADMIN']} />}>
+                    <Route path="/admin/clients" element={<ClientsPage />} />
+                    <Route path="/admin/tracks" element={<TracksPage />} />
+                    <Route path="/admin/tracks/:trackId" element={<TrackEditorPage />} />
+                  </Route>
                 </Route>
               </Route>
 

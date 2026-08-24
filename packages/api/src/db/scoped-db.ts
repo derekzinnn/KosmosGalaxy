@@ -43,6 +43,37 @@ export interface ScopedDb {
     update(args: Prisma.InvitationUpdateArgs): Promise<Prisma.InvitationModel>;
     updateMany(args: Prisma.InvitationUpdateManyArgs): Promise<{ count: number }>;
   };
+
+  /**
+   * The bridge between Kosmos-authored content and a client company.
+   *
+   * Track, Module, Lesson and Resource carry no tenant column — they are one
+   * shared library, not a copy per client — so the guard cannot check them.
+   * TrackAssignment is the piece that does carry tenancy, and reading a
+   * client's tracks *through it* is what keeps the guard in the loop.
+   *
+   * Read CLAUDE.md → "Known limits" before writing the mirror-image query
+   * (`track.findMany({ where: { assignments: { some: { tenantId } } } })`).
+   * Prisma reports that as a single operation on an unscoped model, so the
+   * tripwire never sees the tenant filter and cannot tell you if you forgot it.
+   */
+  readonly trackAssignment: {
+    findFirst(
+      args?: Prisma.TrackAssignmentFindFirstArgs,
+    ): Promise<Prisma.TrackAssignmentModel | null>;
+    /**
+     * Generic over its arguments so an `include` still types the result.
+     * The flat-model signature used elsewhere in this file is fine for
+     * scalar reads, but it would throw away the joined `track` payload that
+     * the client-facing listing depends on.
+     */
+    findMany<T extends Prisma.TrackAssignmentFindManyArgs>(
+      args?: Prisma.SelectSubset<T, Prisma.TrackAssignmentFindManyArgs>,
+    ): Promise<Prisma.TrackAssignmentGetPayload<T>[]>;
+    count(args?: Prisma.TrackAssignmentCountArgs): Promise<number>;
+    create(data: Prisma.TrackAssignmentUncheckedCreateInput): Promise<Prisma.TrackAssignmentModel>;
+    deleteMany(args: Prisma.TrackAssignmentDeleteManyArgs): Promise<{ count: number }>;
+  };
 }
 
 export function createScopedDb(client: DbClient, scope: TenantScope): ScopedDb {
@@ -106,6 +137,21 @@ export function createScopedDb(client: DbClient, scope: TenantScope): ScopedDb {
         client.invitation.update({ ...args, where: { ...args.where, ...byTenantId } }),
       updateMany: (args) =>
         client.invitation.updateMany({ ...args, where: { ...args.where, ...byTenantId } }),
+    },
+
+    trackAssignment: {
+      findFirst: (args = {}) =>
+        client.trackAssignment.findFirst({ ...args, where: { ...args.where, ...byTenantId } }),
+      findMany: ((args: Prisma.TrackAssignmentFindManyArgs = {}) =>
+        client.trackAssignment.findMany({
+          ...args,
+          where: { ...args.where, ...byTenantId },
+        })) as ScopedDb['trackAssignment']['findMany'],
+      count: (args = {}) =>
+        client.trackAssignment.count({ ...args, where: { ...args.where, ...byTenantId } }),
+      create: (data) => client.trackAssignment.create({ data: { ...data, ...byTenantId } }),
+      deleteMany: (args) =>
+        client.trackAssignment.deleteMany({ ...args, where: { ...args.where, ...byTenantId } }),
     },
   };
 }

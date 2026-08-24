@@ -66,3 +66,38 @@ export async function createTenantWithUsers(name = 'Empresa') {
 export function createSuperadmin(): Promise<Prisma.UserModel> {
   return createUser({ tenantId: null, role: 'SUPERADMIN' });
 }
+
+/**
+ * A published track with one module and one lesson that carries a video, so
+ * it satisfies every publish rule. Content is Kosmos-global, so no tenant
+ * scope is needed to build it.
+ */
+export async function createPublishedTrack(title = 'Trilha de Onboarding') {
+  return runInGlobalScope('system:test-fixture', async (db) => {
+    const track = await db.raw.track.create({
+      data: { title, slug: unique('trilha'), published: true },
+    });
+
+    const module = await db.raw.module.create({
+      data: { trackId: track.id, title: 'Primeiros passos', order: 0 },
+    });
+
+    const lesson = await db.raw.lesson.create({
+      data: {
+        moduleId: module.id,
+        title: 'Boas-vindas',
+        order: 0,
+        bunnyVideoId: 'bunny-video-1',
+        durationSeconds: 300,
+      },
+    });
+
+    return { track, module, lesson };
+  });
+}
+
+export function assignTrackToTenant(trackId: string, tenantId: string) {
+  return runInGlobalScope('system:test-fixture', (db) =>
+    db.raw.trackAssignment.create({ data: { trackId, tenantId } }),
+  );
+}

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authRouter } from './auth.routes.js';
+import { contentRouter, lessonRouter, moduleRouter, resourceRouter } from './content.routes.js';
 import { invitationRouter } from './invitation.routes.js';
 import { tenantRouter } from './tenant.routes.js';
 
@@ -12,3 +13,7 @@ apiRouter.get('/health', (_req, res) => {
 apiRouter.use('/auth', authRouter);
 apiRouter.use('/invitations', invitationRouter);
 apiRouter.use('/tenants', tenantRouter);
+apiRouter.use('/tracks', contentRouter);
+apiRouter.use('/modules', moduleRouter);
+apiRouter.use('/lessons', lessonRouter);
+apiRouter.use('/resources', resourceRouter);
