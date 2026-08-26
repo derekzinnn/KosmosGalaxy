@@ -8,7 +8,33 @@
       name="description"
       content="Kosmos Galaxy — a plataforma de onboarding da Kosmos Inteligência Digital."
     />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>Kosmos Galaxy</title>
+
+    <!--
+      Resolve the theme before the first paint.
+
+      React mounts a moment after the document does. Without this, a person
+      opening the app at night gets a white flash and then the dark screen they
+      asked for — which is worse than either, and lands at exactly the moment
+      it hurts most. The storage key is shared with src/theme/theme-context.ts
+      and the two must not drift.
+    -->
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem('kosmos-theme');
+          var followSystem = stored !== 'light' && stored !== 'dark';
+          var dark = followSystem
+            ? window.matchMedia('(prefers-color-scheme: dark)').matches
+            : stored === 'dark';
+          if (dark) document.documentElement.classList.add('dark');
+          document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+        } catch (error) {
+          /* Site data blocked. Light is a safe floor, and React corrects it. */
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

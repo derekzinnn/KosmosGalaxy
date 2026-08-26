@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/auth/useAuth';
 import { AuthLayout } from '@/components/AuthLayout';
 import { FormField } from '@/components/FormField';
+import { PasswordField } from '@/components/PasswordField';
 import { MIN_PASSWORD_LENGTH, PasswordRequirements } from '@/components/PasswordRequirements';
 import { FullPageLoader } from '@/components/states/FullPageLoader';
 import { Alert } from '@/components/ui/alert';
@@ -108,9 +109,8 @@ export function AcceptInvitePage() {
         />
 
         <div className="space-y-2">
-          <FormField
+          <PasswordField
             label="Crie uma senha"
-            type="password"
             name="password"
             autoComplete="new-password"
             required

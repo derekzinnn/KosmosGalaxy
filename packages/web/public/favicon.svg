@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <!--
+    The same mark as components/Logo.tsx, with the accent resolved to a literal.
+    A favicon has no stylesheet to inherit currentColor from.
+    Indigo reads on both a light and a dark browser chrome, so one file serves both.
+  -->
+  <circle cx="12" cy="12" r="7.25" stroke="#5b4ae0" stroke-width="1.5" opacity="0.35" />
+  <ellipse cx="12" cy="12" rx="10.5" ry="4.25" stroke="#5b4ae0" stroke-width="1.5"
+           transform="rotate(-24 12 12)" />
+  <circle cx="12" cy="12" r="2.75" fill="#5b4ae0" />
+</svg>

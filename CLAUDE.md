@@ -69,11 +69,12 @@ packages/web                      Vite + React 19 + Router + TanStack Query
   src/
     auth/                         Auth context, silent refresh, route guards
     hooks/                        useHeartbeat — the player's reporting loop
+    theme/                        Light/dark/system, resolved before first paint
     components/ui/                shadcn-style primitives
     components/states/            Loading, empty and error states
     pages/                        One file per route
     lib/                          API client, error → Portuguese copy mapping
-    index.css                     Design tokens. Every colour resolves here.
+    index.css                     Design tokens, light and dark. Every colour resolves here.
 ```
 
 **Business rules live in services.** Controllers make no decisions and touch no
@@ -353,6 +354,25 @@ portability.
 | Column naming               | **`external_video_id`, never the vendor name** | It was `bunny_video_id`, then `panda_video_id`, and the choice was reopened four times in two sittings. Each reopening dragged the schema, a migration, the Zod schemas, the API and the web package along with it, for a value opaque to all of them. `VideoProvider` is where the vendor belongs; in front of that seam nothing should have to know |
 | Provider abstraction        | **Thin, and stops at the player**              | `VideoProvider` covers signing a URL and reading a duration. It does not cover the player: every vendor ships its own embed, so swapping vendors still means rewriting that component. An interface that implied otherwise would sell a portability nobody has                                                                                        |
 
+### Light and dark
+
+The dark palette was written in Phase 0 and nothing switched it on for three
+phases. `index.html` had already declared `color-scheme: light dark`, so a
+client whose laptop was dark got a bright white screen from a page that had
+told the browser to expect otherwise.
+
+**Three states, not two.** `system` is the default and keeps following the
+operating system, so a machine that dims at sunset dims the app with it.
+Choosing light or dark opts out of that — which is the entire reason somebody
+reaches for the control, and a two-state toggle strands "follow the system"
+forever after the first click.
+
+**Resolved before the first paint.** An inline script in `index.html` applies
+the class before React loads. Without it the first paint is light and the
+correction lands a frame later: a white flash on a dark screen, at exactly the
+moment somebody is opening the app at night. The storage key is duplicated
+between that script and `theme/theme-context.ts`, and the two must not drift.
+
 ### The vendor swap point
 
 Exactly two places know which video provider is in use:
@@ -468,8 +488,9 @@ pure functions and making them wait on PostgreSQL to be checked would be a
 reason to check them less often. `vitest.config.ts` owns `tests/`,
 `vitest.unit.config.ts` owns `src/`, and the two never overlap.
 
-**39 web tests** cover the error-copy mapping, the login form, the route guard,
-refresh serialisation, the heartbeat loop and the classroom page. The heartbeat
+**54 web tests** cover the error-copy mapping, the login form, the route guard,
+refresh serialisation, the heartbeat loop, the classroom page, the theme
+resolution and the password reveal. The heartbeat
 tests are the ones worth reading: they pin down that it does not overlap itself
 on a slow connection, that it flushes the tail on pause and unmount, and that a
 motionless player stops reporting.

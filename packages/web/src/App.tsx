@@ -4,6 +4,7 @@ import { AuthProvider } from '@/auth/AuthProvider';
 import { RedirectIfAuthenticated, RequireAuth } from '@/auth/RequireAuth';
 import { AppShell } from '@/components/AppShell';
 import { RootErrorBoundary } from '@/components/RootErrorBoundary';
+import { ThemeProvider } from '@/theme/ThemeProvider';
 import { AcceptInvitePage } from '@/pages/AcceptInvitePage';
 import { ClientsPage } from '@/pages/admin/ClientsPage';
 import { TrackEditorPage } from '@/pages/admin/TrackEditorPage';
@@ -31,40 +32,42 @@ const queryClient = new QueryClient({
 export function App() {
   return (
     <RootErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <AuthProvider>
-            <Routes>
-              {/* Signed out. A signed-in visitor is bounced to the dashboard. */}
-              <Route element={<RedirectIfAuthenticated />}>
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/invite/:token" element={<AcceptInvitePage />} />
-              </Route>
+      <ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          <BrowserRouter>
+            <AuthProvider>
+              <Routes>
+                {/* Signed out. A signed-in visitor is bounced to the dashboard. */}
+                <Route element={<RedirectIfAuthenticated />}>
+                  <Route path="/login" element={<LoginPage />} />
+                  <Route path="/invite/:token" element={<AcceptInvitePage />} />
+                </Route>
 
-              {/* Reachable either way: someone mid-reset may still hold a session. */}
-              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-              <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+                {/* Reachable either way: someone mid-reset may still hold a session. */}
+                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
 
-              {/* Signed in. */}
-              <Route element={<RequireAuth />}>
-                <Route element={<AppShell />}>
-                  <Route path="/" element={<DashboardPage />} />
-                  <Route path="/aulas/:lessonId" element={<LessonPage />} />
+                {/* Signed in. */}
+                <Route element={<RequireAuth />}>
+                  <Route element={<AppShell />}>
+                    <Route path="/" element={<DashboardPage />} />
+                    <Route path="/aulas/:lessonId" element={<LessonPage />} />
 
-                  {/* Authoring is Kosmos-only; the guard sends anyone else home. */}
-                  <Route element={<RequireAuth allow={['SUPERADMIN']} />}>
-                    <Route path="/admin/clients" element={<ClientsPage />} />
-                    <Route path="/admin/tracks" element={<TracksPage />} />
-                    <Route path="/admin/tracks/:trackId" element={<TrackEditorPage />} />
+                    {/* Authoring is Kosmos-only; the guard sends anyone else home. */}
+                    <Route element={<RequireAuth allow={['SUPERADMIN']} />}>
+                      <Route path="/admin/clients" element={<ClientsPage />} />
+                      <Route path="/admin/tracks" element={<TracksPage />} />
+                      <Route path="/admin/tracks/:trackId" element={<TrackEditorPage />} />
+                    </Route>
                   </Route>
                 </Route>
-              </Route>
 
-              <Route path="*" element={<NotFoundPage />} />
-            </Routes>
-          </AuthProvider>
-        </BrowserRouter>
-      </QueryClientProvider>
+                <Route path="*" element={<NotFoundPage />} />
+              </Routes>
+            </AuthProvider>
+          </BrowserRouter>
+        </QueryClientProvider>
+      </ThemeProvider>
     </RootErrorBoundary>
   );
 }

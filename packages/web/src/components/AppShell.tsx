@@ -2,6 +2,7 @@ import { LogOut } from 'lucide-react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '@/auth/useAuth';
 import { Logo } from '@/components/Logo';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { Button } from '@/components/ui/button';
 
 const ROLE_LABELS: Readonly<Record<string, string>> = {
@@ -49,6 +50,18 @@ export function AppShell() {
 
   return (
     <div className="flex min-h-dvh flex-col">
+      {/*
+        The first thing a keyboard reaches, and invisible until it does. Without
+        it, every page begins with the same tab through the logo, three nav
+        links and the sign-out button before the actual content.
+      */}
+      <a
+        href="#conteudo"
+        className="sr-only rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50"
+      >
+        Pular para o conteúdo
+      </a>
+
       <header className="sticky top-0 z-10 border-b border-border bg-card/80 backdrop-blur-sm">
         <div className="mx-auto flex h-16 w-full max-w-5xl items-center justify-between gap-4 px-5">
           <div className="flex min-w-0 items-center gap-6">
@@ -64,6 +77,8 @@ export function AppShell() {
           </div>
 
           <div className="flex items-center gap-3">
+            <ThemeToggle className="hidden sm:inline-flex" />
+
             {user ? (
               <div className="flex items-center gap-3">
                 <div className="hidden text-right sm:block">
@@ -107,13 +122,16 @@ export function AppShell() {
         </nav>
       ) : null}
 
-      <main className="mx-auto w-full max-w-5xl flex-1 px-5 py-10">
+      <main id="conteudo" className="mx-auto w-full max-w-5xl flex-1 px-5 py-10">
         <Outlet />
       </main>
 
       <footer className="border-t border-border">
-        <div className="mx-auto w-full max-w-5xl px-5 py-6 text-xs text-muted-foreground">
-          Kosmos Inteligência Digital
+        <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-between gap-3 px-5 py-6">
+          <p className="text-xs text-muted-foreground">Kosmos Inteligência Digital</p>
+          {/* The only place the toggle reaches a phone, where the header has
+              no room for it. */}
+          <ThemeToggle className="sm:hidden" />
         </div>
       </footer>
     </div>

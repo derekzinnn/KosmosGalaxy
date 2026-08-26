@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { AuthLayout } from '@/components/AuthLayout';
-import { FormField } from '@/components/FormField';
+import { PasswordField } from '@/components/PasswordField';
 import { MIN_PASSWORD_LENGTH, PasswordRequirements } from '@/components/PasswordRequirements';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -89,9 +89,8 @@ export function ResetPasswordPage() {
         ) : null}
 
         <div className="space-y-2">
-          <FormField
+          <PasswordField
             label="Nova senha"
-            type="password"
             name="password"
             autoComplete="new-password"
             required
@@ -104,9 +103,8 @@ export function ResetPasswordPage() {
           <PasswordRequirements value={password} />
         </div>
 
-        <FormField
+        <PasswordField
           label="Repita a nova senha"
-          type="password"
           name="passwordConfirmation"
           autoComplete="new-password"
           required

@@ -3,6 +3,7 @@ import { render, type RenderOptions } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthContext, type AuthContextValue } from '@/auth/auth-context';
+import { ThemeProvider } from '@/theme/ThemeProvider';
 
 export function renderWithProviders(
   ui: ReactElement,
@@ -28,11 +29,13 @@ export function renderWithProviders(
 
   return render(ui, {
     wrapper: ({ children }) => (
-      <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={[route]}>
-          <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
-        </MemoryRouter>
-      </QueryClientProvider>
+      <ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={[route]}>
+            <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+          </MemoryRouter>
+        </QueryClientProvider>
+      </ThemeProvider>
     ),
     ...rest,
   });

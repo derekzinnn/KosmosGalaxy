@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/auth/useAuth';
 import { AuthLayout } from '@/components/AuthLayout';
 import { FormField } from '@/components/FormField';
+import { PasswordField } from '@/components/PasswordField';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { fieldErrorsFrom, messageFor } from '@/lib/api-error';
@@ -62,9 +63,8 @@ export function LoginPage() {
           onChange={(event) => setEmail(event.target.value)}
         />
 
-        <FormField
+        <PasswordField
           label="Senha"
-          type="password"
           name="password"
           autoComplete="current-password"
           required
