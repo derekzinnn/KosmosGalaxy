@@ -3,6 +3,9 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     environment: 'node',
+    // Integration tests only. Pure unit tests live in src/ and run under
+    // vitest.unit.config.ts, which needs no database.
+    include: ['tests/**/*.test.ts'],
     globalSetup: ['tests/global-setup.ts'],
     setupFiles: ['tests/setup.ts'],
     /**

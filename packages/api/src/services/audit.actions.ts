@@ -46,6 +46,17 @@ export const AuditAction = {
   RESOURCE_CREATED: 'RESOURCE_CREATED',
   RESOURCE_DELETED: 'RESOURCE_DELETED',
 
+  /**
+   * Progress milestones, and only milestones.
+   *
+   * A heartbeat arrives every few seconds per viewer per lesson; auditing
+   * those would bury every other row within a week. The telemetry lives in
+   * `watch_events` and the running total in `lesson_progress`. What belongs in
+   * an append-only ledger is the moment something became true.
+   */
+  LESSON_COMPLETED: 'LESSON_COMPLETED',
+  TRACK_COMPLETED: 'TRACK_COMPLETED',
+
   /** A revoked refresh token was presented again — the token was stolen. */
   REFRESH_TOKEN_REUSE_DETECTED: 'REFRESH_TOKEN_REUSE_DETECTED',
 

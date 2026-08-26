@@ -23,9 +23,15 @@ import {
   updateModuleHandler,
   updateTrackHandler,
 } from '../controllers/content.controller.js';
+import {
+  heartbeatHandler,
+  lessonProgressHandler,
+  playbackHandler,
+} from '../controllers/progress.controller.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { requireRole } from '../middleware/authorize.js';
 import { validateBody } from '../middleware/validate.js';
+import { heartbeatSchema } from '../schemas/progress.schemas.js';
 import {
   assignTrackSchema,
   createTrackSchema,
@@ -98,11 +104,37 @@ moduleRouter.post('/:moduleId/lessons', validateBody(lessonSchema), createLesson
 moduleRouter.post('/:moduleId/lessons/reorder', validateBody(reorderSchema), reorderLessonsHandler);
 
 export const lessonRouter: Router = Router();
-lessonRouter.use(authenticate, requireRole('SUPERADMIN'));
+lessonRouter.use(authenticate);
 
-lessonRouter.patch('/:lessonId', validateBody(updateLessonSchema), updateLessonHandler);
-lessonRouter.delete('/:lessonId', deleteLessonHandler);
-lessonRouter.post('/:lessonId/resources', validateBody(resourceSchema), createResourceHandler);
+/**
+ * Playback and progress, for whoever is entitled to them.
+ *
+ * Deliberately not behind a role check. "Are you staff?" is the wrong
+ * question here and would answer it backwards: staff may preview any lesson,
+ * a client may reach only what their company was assigned and has unlocked.
+ * Both services resolve that themselves, from the assignment and the unlock
+ * rule — a finer test than any role gate could apply.
+ */
+lessonRouter.get('/:lessonId/playback', playbackHandler);
+lessonRouter.get('/:lessonId/progress', lessonProgressHandler);
+lessonRouter.post('/:lessonId/heartbeat', validateBody(heartbeatSchema), heartbeatHandler);
+
+// ── Authoring, Kosmos staff only ──────────────────────────────────────────
+const lessonStaffOnly = requireRole('SUPERADMIN');
+
+lessonRouter.patch(
+  '/:lessonId',
+  lessonStaffOnly,
+  validateBody(updateLessonSchema),
+  updateLessonHandler,
+);
+lessonRouter.delete('/:lessonId', lessonStaffOnly, deleteLessonHandler);
+lessonRouter.post(
+  '/:lessonId/resources',
+  lessonStaffOnly,
+  validateBody(resourceSchema),
+  createResourceHandler,
+);
 
 export const resourceRouter: Router = Router();
 resourceRouter.use(authenticate, requireRole('SUPERADMIN'));

@@ -74,6 +74,38 @@ export interface ScopedDb {
     create(data: Prisma.TrackAssignmentUncheckedCreateInput): Promise<Prisma.TrackAssignmentModel>;
     deleteMany(args: Prisma.TrackAssignmentDeleteManyArgs): Promise<{ count: number }>;
   };
+
+  /**
+   * What one person has watched of one lesson.
+   *
+   * `upsert` is the primitive a heartbeat needs. Two players reporting at the
+   * same instant would race a find-then-create straight into a duplicate-key
+   * error on `@@unique([userId, lessonId])`; PostgreSQL settles that contest
+   * and application code cannot. There is no delete: erasing what somebody
+   * watched is not a thing this service does.
+   */
+  readonly lessonProgress: {
+    findFirst(
+      args?: Prisma.LessonProgressFindFirstArgs,
+    ): Promise<Prisma.LessonProgressModel | null>;
+    findMany(args?: Prisma.LessonProgressFindManyArgs): Promise<Prisma.LessonProgressModel[]>;
+    count(args?: Prisma.LessonProgressCountArgs): Promise<number>;
+    upsert(args: Prisma.LessonProgressUpsertArgs): Promise<Prisma.LessonProgressModel>;
+  };
+
+  /**
+   * Raw telemetry: one row per heartbeat, never revisited.
+   *
+   * Create and read only. A watch event is evidence that something happened,
+   * and the aggregate that anybody actually queries lives in LessonProgress —
+   * which is why this table can grow without bound and why its id is a BigInt
+   * sequence rather than a UUID.
+   */
+  readonly watchEvent: {
+    create(data: Prisma.WatchEventUncheckedCreateInput): Promise<Prisma.WatchEventModel>;
+    findMany(args?: Prisma.WatchEventFindManyArgs): Promise<Prisma.WatchEventModel[]>;
+    count(args?: Prisma.WatchEventCountArgs): Promise<number>;
+  };
 }
 
 export function createScopedDb(client: DbClient, scope: TenantScope): ScopedDb {
@@ -152,6 +184,32 @@ export function createScopedDb(client: DbClient, scope: TenantScope): ScopedDb {
       create: (data) => client.trackAssignment.create({ data: { ...data, ...byTenantId } }),
       deleteMany: (args) =>
         client.trackAssignment.deleteMany({ ...args, where: { ...args.where, ...byTenantId } }),
+    },
+
+    lessonProgress: {
+      findFirst: (args = {}) =>
+        client.lessonProgress.findFirst({ ...args, where: { ...args.where, ...byTenantId } }),
+      findMany: (args = {}) =>
+        client.lessonProgress.findMany({ ...args, where: { ...args.where, ...byTenantId } }),
+      count: (args = {}) =>
+        client.lessonProgress.count({ ...args, where: { ...args.where, ...byTenantId } }),
+      // Both halves are pinned: `where` so the lookup cannot find another
+      // tenant's row, `create` so the insert cannot write one. The guard
+      // checks exactly these two for an upsert.
+      upsert: (args) =>
+        client.lessonProgress.upsert({
+          ...args,
+          where: { ...args.where, ...byTenantId },
+          create: { ...args.create, ...byTenantId } as Prisma.LessonProgressUncheckedCreateInput,
+        }),
+    },
+
+    watchEvent: {
+      create: (data) => client.watchEvent.create({ data: { ...data, ...byTenantId } }),
+      findMany: (args = {}) =>
+        client.watchEvent.findMany({ ...args, where: { ...args.where, ...byTenantId } }),
+      count: (args = {}) =>
+        client.watchEvent.count({ ...args, where: { ...args.where, ...byTenantId } }),
     },
   };
 }

@@ -14,7 +14,7 @@ in, who watched what, who is stuck and who has not started.
 | ----------- | ---------------------------------------------------------------------------- | ----------- |
 | **Phase 0** | Monorepo, database schema, auth, invitations, RBAC, audit log                | ✅ **Done** |
 | **Phase 1** | Course content CRUD, ordering, publishing, track assignment                  | ✅ **Done** |
-| Phase 2     | Panda Video, signed playback, player, heartbeat telemetry, sequential unlock | Next        |
+| Phase 2     | Panda Video, signed playback, player, heartbeat telemetry, sequential unlock | 🔨 API done |
 | Phase 3     | Client-facing classroom UI and progress experience                           | Not started |
 | Phase 4     | Admin console: onboarding funnel, per-client drill-down, audit viewer        | Not started |
 
@@ -174,6 +174,12 @@ Added in Phase 1: `TRACK_CREATED`, `TRACK_UPDATED`, `TRACK_DELETED`,
 `LESSON_CREATED`, `LESSON_UPDATED`, `LESSON_DELETED`, `LESSONS_REORDERED`,
 `RESOURCE_CREATED`, `RESOURCE_DELETED`.
 
+Added in Phase 2: `LESSON_COMPLETED`, `TRACK_COMPLETED`. Only milestones. A
+heartbeat lands every few seconds per viewer per lesson, and auditing those
+would bury every other row within a week — the raw telemetry lives in
+`watch_events`, the running total in `lesson_progress`, and the ledger keeps
+only the moment something became true.
+
 ---
 
 ## Database guarantees
@@ -250,6 +256,23 @@ does not exist verifies against a throwaway hash so it takes just as long.
 | `GET`  | `/tenants`                   | Authenticated (scoped)   |
 | `GET`  | `/tenants/:id`               | Authenticated (scoped)   |
 
+### Added in Phase 2
+
+| Method | Path                     | Access                    |
+| ------ | ------------------------ | ------------------------- |
+| `GET`  | `/lessons/:id/playback`  | Assigned client, or staff |
+| `GET`  | `/lessons/:id/progress`  | Assigned client           |
+| `POST` | `/lessons/:id/heartbeat` | Assigned client, unlocked |
+
+None of the three is behind a role gate, on purpose. "Are you staff?" is the
+wrong question and answers it backwards: staff may preview any lesson, a client
+may reach only what their company was assigned and has unlocked. The services
+resolve that from the assignment and the unlock rule, which is a finer test
+than a role check can make.
+
+A lesson the caller was never assigned answers **404, not 403**. A 403 confirms
+the lesson exists, which is what somebody enumerating ids is trying to learn.
+
 Errors are `{ error: { code, message, details? } }`. **`code` is the contract**
 and is English; Portuguese copy lives in `packages/web/src/lib/api-error.ts`,
 keyed by code, so the API stays language-neutral. Field-level validation
@@ -315,6 +338,19 @@ every vendor ships its own embed, so swapping vendors would still mean rewriting
 the player component. Pretending otherwise would buy a false sense of
 portability.
 
+### Decisions taken in Phase 2 — API
+
+| Decision                    | Choice                                    | Why                                                                                                                                                                                                                                                                                                                                           |
+| --------------------------- | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Where completion is decided | **Watched time, never furthest position** | Dragging a scrubber to the end moves the position instantly and the clock not at all. Kosmos is going to act on "who finished onboarding", so the number behind it has to be one a client cannot produce by accident or on purpose                                                                                                            |
+| Crediting watched time      | **New ground, capped by wall clock × 3**  | Two defences that fail differently: credit is only given past the furthest point previously reached, so replaying the intro thirty times credits it once; and it is capped at what elapsed time allows. The cap is above 1× because people genuinely watch training at 1.5× and 2×, and refusing to ever complete those people reads as a bug |
+| Unknown duration            | **Never auto-completes**                  | Guessing a length would let a wrong number decide who finished. Panda reports the real one; until it does, the lesson is watchable and simply does not close                                                                                                                                                                                  |
+| The unlock rule             | **Pure, and separately tested**           | It decides what a client may open. A rule that heavy should be checkable without standing up PostgreSQL, so it lives in `unlock.ts` with no database, no scope and no clock — the service supplies facts, the rule returns a verdict                                                                                                          |
+| Unlock enforcement          | **On playback and on every heartbeat**    | Not only when the player opens. A client that keeps posting after being told no is precisely the case worth handling, and the check costs nothing already loaded                                                                                                                                                                              |
+| Playback auditing           | **None**                                  | Every press of play would write a row, and a log that grows with viewing rather than with decisions is a log nobody reads. `watch_events` exists so the ledger does not have to carry it                                                                                                                                                      |
+| Staff progress              | **Impossible, not merely empty**          | Every progress row carries a tenant and staff belong to none. Rather than inventing one, watching is not something a staff account does — they preview instead. "Who watched what" keeps exactly one kind of answer                                                                                                                           |
+| Provider abstraction        | **Thin, and stops at the player**         | `VideoProvider` covers signing a URL and reading a duration. It does not cover the player: every vendor ships its own embed, so swapping vendors still means rewriting that component. An interface that implied otherwise would sell a portability nobody has                                                                                |
+
 ### Things flagged as risky
 
 - **Per-email rate limiting is a lockout weapon.** Anyone who knows a client's
@@ -323,6 +359,16 @@ portability.
   any of it. The strict limits are per IP and per IP+email. Residual risk — a
   distributed flood temporarily locking one account — is accepted and visible in
   the audit log.
+- **`watch_events` grows with heartbeat volume, and nothing rate-limits it.**
+  An authenticated client posting heartbeats in a loop cannot gain progress —
+  the credit rule is bound by the wall clock — but it can insert rows as fast
+  as it likes. The fix is a floor on how often an event is written (the
+  aggregate would still update); it is not in yet, and it is the first thing
+  to add before this endpoint meets real traffic.
+- **The Panda provider is a stub.** `VIDEO_PROVIDER=panda` throws at first use
+  with a checklist. Everything upstream of it is finished and exercised
+  against `FakeVideoProvider`; only the last hop is missing, and it needs the
+  vendor's signing scheme rather than a guess at it.
 - **`SameSite=Lax` constrains DNS.** See **Infra requirements**.
 - **In-memory rate limiting does not survive a second instance.** Fine on one
   container; the moment the API scales horizontally the limits become
@@ -398,6 +444,13 @@ is not "can Alfa read Beta's track?" but "can Alfa discover that Beta was given
 anything at all?". It proves a client sees only their own assignments, only
 published ones, never the Panda video id, and cannot reach an authoring endpoint
 even for a track they legitimately have.
+
+**36 API unit tests** run with no database at all, under
+`npm run test:unit --workspace @kosmos/api`. They cover the two rules Phase 2
+turns on — what a heartbeat is worth, and what is unlocked — because both are
+pure functions and making them wait on PostgreSQL to be checked would be a
+reason to check them less often. `vitest.config.ts` owns `tests/`,
+`vitest.unit.config.ts` owns `src/`, and the two never overlap.
 
 **20 web tests** cover the error-copy mapping, the login form, the route guard,
 and refresh serialisation.

@@ -46,6 +46,43 @@ const envSchema = z
     EMAIL_PROVIDER: z.enum(['console']).default('console'),
     EMAIL_FROM: z.string().min(1).default('Kosmos Galaxy <nao-responda@kosmosgalaxy.com.br>'),
 
+    VIDEO_PROVIDER: z.enum(['fake', 'panda']).default('fake'),
+    PANDA_API_KEY: z.string().min(1).optional(),
+    PANDA_LIBRARY_ID: z.string().min(1).optional(),
+
+    /**
+     * How long a minted playback URL stays valid. Long enough to start a
+     * lesson on a slow connection, short enough that a URL pasted into a
+     * group chat is dead before anyone opens it. The player asks for a fresh
+     * one when it expires mid-lesson.
+     */
+    PLAYBACK_URL_TTL_SECONDS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(60 * 10),
+
+    /** How often the player reports its position while a lesson plays. */
+    HEARTBEAT_INTERVAL_SECONDS: z.coerce.number().int().positive().default(15),
+
+    /**
+     * Fraction of a lesson that must actually be watched before it counts as
+     * complete. Measured against watched time, not the furthest point reached
+     * — dragging the scrubber to the end moves the second and not the first.
+     */
+    LESSON_COMPLETION_RATIO: z.coerce.number().gt(0).max(1).default(0.9),
+
+    /**
+     * The fastest playback this service will credit as real watching.
+     *
+     * Watched time is credited from how far the position moved, but never
+     * more than this multiple of the wall-clock time that actually passed.
+     * Above 1 so that a client watching at 1.5x or 2x — which the player
+     * offers, and which people genuinely use — still finishes the lesson.
+     * Bounded so that jumping to the end credits nothing.
+     */
+    MAX_CREDITED_PLAYBACK_SPEED: z.coerce.number().gte(1).max(10).default(3),
+
     LOG_LEVEL: z
       .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
       .default('info'),
@@ -56,6 +93,14 @@ const envSchema = z
         code: 'custom',
         path: ['JWT_SECRET'],
         message: 'JWT_SECRET still holds the example value from .env.example',
+      });
+    }
+    if (value.NODE_ENV === 'production' && value.VIDEO_PROVIDER === 'fake') {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['VIDEO_PROVIDER'],
+        message:
+          'VIDEO_PROVIDER=fake mints URLs that play nothing. Production needs a real provider.',
       });
     }
     if (value.NODE_ENV === 'test' && !value.DATABASE_URL_TEST) {
