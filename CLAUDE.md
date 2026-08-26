@@ -14,7 +14,7 @@ in, who watched what, who is stuck and who has not started.
 | ----------- | ----------------------------------------------------------------------------- | ----------- |
 | **Phase 0** | Monorepo, database schema, auth, invitations, RBAC, audit log                 | ✅ **Done** |
 | **Phase 1** | Course content CRUD, ordering, publishing, track assignment                   | ✅ **Done** |
-| Phase 2     | Bunny Stream, signed playback, player, heartbeat telemetry, sequential unlock | Next        |
+| Phase 2     | Panda Video, signed playback, player, heartbeat telemetry, sequential unlock  | Next        |
 | Phase 3     | Client-facing classroom UI and progress experience                            | Not started |
 | Phase 4     | Admin console: onboarding funnel, per-client drill-down, audit viewer         | Not started |
 
@@ -294,6 +294,27 @@ messages and identifiers are **English**.
 | Client-facing reads      | **Through `TrackAssignment`**                    | See **Known limits**. The guarded side of the relation is the only side that can be checked                                                                                                                                                                                                                                                                                                                                              |
 | A minimal Clients screen | **Added, though the console is Phase 4**         | Without a way to create a company and invite its owner, the assign dropdown is permanently empty and Phase 1 cannot be used at all. The funnel, drill-down and audit viewer remain Phase 4                                                                                                                                                                                                                                               |
 
+### Decisions taken ahead of Phase 2
+
+| Decision     | Choice                            | Why                                                                                                                                                                                                                                                                                                                                                       |
+| ------------ | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Video vendor | **Panda Video, not Bunny Stream** | Kosmos intends to sell courses later. That turns the Panda feature set — per-viewer dynamic watermark, DRM, domain lock — from something this onboarding platform does not need into the thing that protects the product. Choosing it now costs one column rename; choosing it after Phase 2 costs the integration plus re-uploading the whole video library |
+
+**What this trades away, knowingly.** Bunny is cheaper per GB at low volume and
+has no plan floor, and the engagement analytics built into Panda is redundant
+here — `WatchEvent` and `LessonProgress` stay the source of truth, because the
+Phase 4 funnel joins watch data against invitations and logins in our own
+Postgres, and no third-party dashboard can do that join. Panda earns its price
+on protection, and on billing in BRL with a nota fiscal, which Bunny cannot
+issue to a Brazilian company.
+
+**The abstraction is deliberately thin.** A `VideoProvider` interface covers
+minting a signed playback URL and reading a real duration — the two things the
+API needs — following the `EmailProvider` precedent. It stops at the player:
+every vendor ships its own embed, so swapping vendors would still mean rewriting
+the player component. Pretending otherwise would buy a false sense of
+portability.
+
 ### Things flagged as risky
 
 - **Per-email rate limiting is a lockout weapon.** Anyone who knows a client's
@@ -349,7 +370,7 @@ in production.
 **Postgres region** São Paulo, per the Supabase project.
 
 **Not yet needed, but coming:** Redis for shared rate limiting once the API runs
-more than one instance; a transactional email vendor's API key; Bunny Stream
+more than one instance; a transactional email vendor's API key; Panda Video
 credentials in Phase 2.
 
 ---
@@ -385,7 +406,7 @@ and refresh serialisation.
 
 ## Notes for the next phase
 
-Phase 2 adds Bunny Stream, signed playback, the player, heartbeat telemetry and
+Phase 2 adds Panda Video, signed playback, the player, heartbeat telemetry and
 sequential unlock. What Phase 1 already put in place for it:
 
 - **`bunnyVideoId` never leaves the API for a client.** `toPublicLesson` sends
@@ -401,5 +422,8 @@ sequential unlock. What Phase 1 already put in place for it:
 - **Sequential unlock needs an order that is trustworthy.** Positions are kept
   contiguous 0..n-1: appends take max+1, deletes renumber, and reorders rewrite
   the whole list. Code may rely on that.
-- **`durationSeconds` is authored by hand today.** Bunny reports the real
+- **`durationSeconds` is authored by hand today.** Panda reports the real
   duration; Phase 2 should fill it from the API rather than trusting the form.
+- **The schema still says `bunny_video_id`.** Renaming it to `panda_video_id` is
+  the first task of Phase 2, before anything is written against it. Nothing has
+  reached production, so the rename is a migration nobody has to live through.
