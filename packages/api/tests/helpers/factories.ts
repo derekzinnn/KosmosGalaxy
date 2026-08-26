@@ -96,6 +96,66 @@ export async function createPublishedTrack(title = 'Trilha de Onboarding') {
   });
 }
 
+/**
+ * A published track with several lessons in one module, for exercising the
+ * unlock rule — which needs somewhere to walk to.
+ *
+ * Every lesson carries a video and a duration, so completion is computable.
+ * A lesson with no duration can be watched but never closes, and a test built
+ * on one would be asserting the wrong thing.
+ */
+export async function createTrackWithLessons(
+  lessonCount = 3,
+  options: { published?: boolean; durationSeconds?: number } = {},
+) {
+  return runInGlobalScope('system:test-fixture', async (db) => {
+    const track = await db.raw.track.create({
+      data: {
+        title: 'Trilha Sequencial',
+        slug: unique('trilha'),
+        published: options.published ?? true,
+      },
+    });
+
+    const module = await db.raw.module.create({
+      data: { trackId: track.id, title: 'Modulo Unico', order: 0 },
+    });
+
+    const lessons = [];
+    for (let index = 0; index < lessonCount; index += 1) {
+      lessons.push(
+        await db.raw.lesson.create({
+          data: {
+            moduleId: module.id,
+            title: `Aula ${String(index + 1)}`,
+            order: index,
+            externalVideoId: `external-video-${String(index + 1)}`,
+            durationSeconds: options.durationSeconds ?? 100,
+          },
+        }),
+      );
+    }
+
+    return { track, module, lessons };
+  });
+}
+
+/** Mark a lesson finished directly, so a test can start from "step 2". */
+export function completeLesson(userId: string, lessonId: string, tenantId: string) {
+  return runInGlobalScope('system:test-fixture', (db) =>
+    db.raw.lessonProgress.create({
+      data: {
+        userId,
+        lessonId,
+        tenantId,
+        maxPositionSeconds: 100,
+        totalWatchedSeconds: 100,
+        completedAt: new Date(),
+      },
+    }),
+  );
+}
+
 export function assignTrackToTenant(trackId: string, tenantId: string) {
   return runInGlobalScope('system:test-fixture', (db) =>
     db.raw.trackAssignment.create({ data: { trackId, tenantId } }),
