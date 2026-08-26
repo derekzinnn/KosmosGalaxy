@@ -101,7 +101,7 @@ describe('course content', () => {
     it('refuses to delete a published track', async () => {
       const track = await newTrack();
       const module = await newModule(track.id);
-      await newLesson(module.id, { pandaVideoId: 'video-1' });
+      await newLesson(module.id, { externalVideoId: 'video-1' });
       await asStaff('post', `/tracks/${track.id}/publish`).expect(200);
 
       const response = await asStaff('delete', `/tracks/${track.id}`).expect(409);
@@ -111,7 +111,7 @@ describe('course content', () => {
     it('refuses to delete a track a client has been given', async () => {
       const track = await newTrack();
       const module = await newModule(track.id);
-      await newLesson(module.id, { pandaVideoId: 'video-1' });
+      await newLesson(module.id, { externalVideoId: 'video-1' });
       await asStaff('post', `/tracks/${track.id}/publish`).expect(200);
       await asStaff('post', `/tracks/${track.id}/assignments`)
         .send({ tenantId: tenant.tenant.id })
@@ -161,7 +161,7 @@ describe('course content', () => {
     it('allows an optional lesson to have no video', async () => {
       const track = await newTrack();
       const module = await newModule(track.id);
-      await newLesson(module.id, { pandaVideoId: 'video-1' });
+      await newLesson(module.id, { externalVideoId: 'video-1' });
       await newLesson(module.id, { title: 'Material extra', isRequired: false });
 
       await asStaff('post', `/tracks/${track.id}/publish`).expect(200);
@@ -188,7 +188,7 @@ describe('course content', () => {
       expect(notReady.body.problems.length).toBeGreaterThan(0);
 
       const module = await newModule(track.id);
-      await newLesson(module.id, { pandaVideoId: 'video-1' });
+      await newLesson(module.id, { externalVideoId: 'video-1' });
 
       const ready = await asStaff('get', `/tracks/${track.id}/readiness`).expect(200);
       expect(ready.body.ready).toBe(true);
@@ -198,7 +198,7 @@ describe('course content', () => {
     it('publishes and unpublishes, recording both', async () => {
       const track = await newTrack();
       const module = await newModule(track.id);
-      await newLesson(module.id, { pandaVideoId: 'video-1' });
+      await newLesson(module.id, { externalVideoId: 'video-1' });
 
       const published = await asStaff('post', `/tracks/${track.id}/publish`).expect(200);
       expect(published.body.track.published).toBe(true);
@@ -310,13 +310,13 @@ describe('course content', () => {
     it('reports whether a video is attached without leaking its id', async () => {
       const track = await newTrack();
       const module = await newModule(track.id);
-      const lesson = await newLesson(module.id, { pandaVideoId: 'panda-abc-123' });
+      const lesson = await newLesson(module.id, { externalVideoId: 'external-abc-123' });
 
       expect(lesson.hasVideo).toBe(true);
 
       // Staff may see the id; the flag is what the client build will consume.
       const response = await asStaff('get', `/tracks/${track.id}`).expect(200);
-      expect(response.body.track.modules[0].lessons[0].pandaVideoId).toBe('panda-abc-123');
+      expect(response.body.track.modules[0].lessons[0].externalVideoId).toBe('external-abc-123');
       expect(response.body.track.modules[0].lessons[0].hasVideo).toBe(true);
     });
 
@@ -339,7 +339,7 @@ describe('course content', () => {
     it('refuses to delete a lesson a client has already started', async () => {
       const track = await newTrack();
       const module = await newModule(track.id);
-      const lesson = await newLesson(module.id, { pandaVideoId: 'video-1' });
+      const lesson = await newLesson(module.id, { externalVideoId: 'video-1' });
 
       // Phase 2 writes these rows; inserting one directly proves the guard
       // will already be there when it does.

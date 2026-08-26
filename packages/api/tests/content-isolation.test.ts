@@ -68,7 +68,7 @@ describe('content visibility between clients', () => {
 
     // Phase 2 serves playback through a signed URL. The raw id reaching a
     // browser now would make that pointless later.
-    expect(JSON.stringify(response.body)).not.toContain('panda-video-1');
+    expect(JSON.stringify(response.body)).not.toContain('external-video-1');
     expect(response.body.tracks[0].modules[0].lessons[0].hasVideo).toBe(true);
   });
 

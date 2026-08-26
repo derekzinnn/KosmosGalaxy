@@ -6,7 +6,7 @@ import type { ResourceType } from '../generated/prisma/enums.js';
  *
  * Built field by field for the same reason as PublicUser: a column added to
  * the schema later stays invisible to clients until somebody decides it should
- * not be. In Phase 2 that matters concretely — `pandaVideoId` must never reach
+ * not be. In Phase 2 that matters concretely — `externalVideoId` must never reach
  * a client browser, since playback will go through a signed URL instead.
  */
 
@@ -58,10 +58,10 @@ export interface PublicTrack {
 
 /**
  * The authoring view adds the one field the admin needs and the client must
- * never receive: which Panda video is attached.
+ * never receive: which video at the provider is attached.
  */
 export interface AdminLesson extends PublicLesson {
-  readonly pandaVideoId: string | null;
+  readonly externalVideoId: string | null;
 }
 
 export function toPublicResource(resource: Prisma.ResourceModel): PublicResource {
@@ -86,13 +86,13 @@ export function toPublicLesson(lesson: LessonWithResources): PublicLesson {
     order: lesson.order,
     durationSeconds: lesson.durationSeconds,
     isRequired: lesson.isRequired,
-    hasVideo: lesson.pandaVideoId !== null,
+    hasVideo: lesson.externalVideoId !== null,
     resources: (lesson.resources ?? []).map(toPublicResource),
   };
 }
 
 export function toAdminLesson(lesson: LessonWithResources): AdminLesson {
-  return { ...toPublicLesson(lesson), pandaVideoId: lesson.pandaVideoId };
+  return { ...toPublicLesson(lesson), externalVideoId: lesson.externalVideoId };
 }
 
 type ModuleWithLessons = Prisma.ModuleModel & { lessons?: LessonWithResources[] };

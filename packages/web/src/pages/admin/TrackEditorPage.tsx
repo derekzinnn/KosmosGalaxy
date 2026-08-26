@@ -349,7 +349,7 @@ function LessonRow({
   onError,
 }: LessonRowProps) {
   const [editingVideo, setEditingVideo] = useState(false);
-  const [videoId, setVideoId] = useState(lesson.pandaVideoId ?? '');
+  const [videoId, setVideoId] = useState(lesson.externalVideoId ?? '');
 
   const move = useMutation({
     mutationFn: async (direction: -1 | 1) => {
@@ -367,7 +367,7 @@ function LessonRow({
   });
 
   const saveVideo = useMutation({
-    mutationFn: () => contentApi.updateLesson(lesson.id, { pandaVideoId: videoId.trim() || null }),
+    mutationFn: () => contentApi.updateLesson(lesson.id, { externalVideoId: videoId.trim() || null }),
     onSuccess: async () => {
       setEditingVideo(false);
       await onChanged();

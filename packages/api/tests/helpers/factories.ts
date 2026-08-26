@@ -87,7 +87,7 @@ export async function createPublishedTrack(title = 'Trilha de Onboarding') {
         moduleId: module.id,
         title: 'Boas-vindas',
         order: 0,
-        pandaVideoId: 'panda-video-1',
+        externalVideoId: 'external-video-1',
         durationSeconds: 300,
       },
     });

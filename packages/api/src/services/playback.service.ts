@@ -16,7 +16,7 @@ import { videoProvider } from './video/index.js';
  * The rule this file exists to enforce: **a client never receives a video
  * id.** They receive a URL that is already signed, already bound to them, and
  * already expiring. That is why `toPublicLesson` has always sent
- * `hasVideo: boolean` instead of `pandaVideoId` — if the id reached the
+ * `hasVideo: boolean` instead of `externalVideoId` — if the id reached the
  * browser, everything below would be decoration.
  */
 
@@ -58,7 +58,7 @@ function issueForStaff(context: RequestContext, lessonId: string): Promise<Playb
     const lesson = await db.raw.lesson.findUnique({ where: { id: lessonId } });
     if (!lesson) throw new NotFoundError('Lesson not found', 'LESSON_NOT_FOUND');
 
-    const ticket = await mint(context, lesson.id, lesson.pandaVideoId, lesson.durationSeconds);
+    const ticket = await mint(context, lesson.id, lesson.externalVideoId, lesson.durationSeconds);
     return { ...ticket, resumeAtSeconds: 0 };
   });
 }
@@ -87,7 +87,7 @@ function issueForClient(context: RequestContext, lessonId: string): Promise<Play
           order: lesson.order,
           isRequired: lesson.isRequired,
           durationSeconds: lesson.durationSeconds,
-          pandaVideoId: lesson.pandaVideoId,
+          externalVideoId: lesson.externalVideoId,
         })),
       })),
     );
@@ -111,7 +111,7 @@ function issueForClient(context: RequestContext, lessonId: string): Promise<Play
       throw new ForbiddenError('This lesson is not unlocked yet', 'LESSON_LOCKED');
     }
 
-    const ticket = await mint(context, lesson.id, lesson.pandaVideoId, lesson.durationSeconds);
+    const ticket = await mint(context, lesson.id, lesson.externalVideoId, lesson.durationSeconds);
 
     return {
       ...ticket,
