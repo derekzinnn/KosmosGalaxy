@@ -1,12 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
 import { Compass, PlayCircle } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '@/auth/useAuth';
 import { EmptyState } from '@/components/states/EmptyState';
 import { ErrorState } from '@/components/states/ErrorState';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { messageFor } from '@/lib/api-error';
-import { contentApi } from '@/lib/content-api';
+import { contentApi, type Track } from '@/lib/content-api';
 
 function greeting(): string {
   const hour = new Date().getHours();
@@ -17,6 +19,22 @@ function greeting(): string {
 
 function firstNameOf(name: string): string {
   return name.trim().split(/\s+/)[0] ?? name;
+}
+
+/**
+ * The lesson a client lands on when they open a trilha.
+ *
+ * The first one, not the one they left off at. The lesson page knows where
+ * they actually are and offers the way forward from there — resolving it here
+ * too would mean a second source of truth for "where am I", and the dashboard
+ * is the wrong place to keep it.
+ */
+function firstLessonOf(track: Track): string | null {
+  for (const module of track.modules ?? []) {
+    const lesson = module.lessons[0];
+    if (lesson) return lesson.id;
+  }
+  return null;
 }
 
 function formatDuration(seconds: number | null): string | null {
@@ -139,9 +157,15 @@ export function DashboardPage() {
                       ))}
                     </ol>
 
-                    <p className="text-xs text-muted-foreground">
-                      As aulas serão liberadas em breve.
-                    </p>
+                    {firstLessonOf(track) ? (
+                      <Button asChild>
+                        <Link to={`/aulas/${firstLessonOf(track) ?? ''}`}>Começar trilha</Link>
+                      </Button>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        As aulas desta trilha ainda estão sendo preparadas.
+                      </p>
+                    )}
                   </div>
                 </Card>
               </li>

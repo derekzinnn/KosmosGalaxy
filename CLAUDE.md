@@ -14,7 +14,7 @@ in, who watched what, who is stuck and who has not started.
 | ----------- | ---------------------------------------------------------------------------- | ----------- |
 | **Phase 0** | Monorepo, database schema, auth, invitations, RBAC, audit log                | ✅ **Done** |
 | **Phase 1** | Course content CRUD, ordering, publishing, track assignment                  | ✅ **Done** |
-| Phase 2     | Panda Video, signed playback, player, heartbeat telemetry, sequential unlock | 🔨 API done |
+| Phase 2     | Panda Video, signed playback, player, heartbeat telemetry, sequential unlock | ✅ **Done** |
 | Phase 3     | Client-facing classroom UI and progress experience                           | Not started |
 | Phase 4     | Admin console: onboarding funnel, per-client drill-down, audit viewer        | Not started |
 
@@ -68,6 +68,7 @@ packages/api                      Express 5 + Prisma 7 + PostgreSQL
 packages/web                      Vite + React 19 + Router + TanStack Query
   src/
     auth/                         Auth context, silent refresh, route guards
+    hooks/                        useHeartbeat — the player's reporting loop
     components/ui/                shadcn-style primitives
     components/states/            Loading, empty and error states
     pages/                        One file per route
@@ -352,6 +353,20 @@ portability.
 | Column naming               | **`external_video_id`, never the vendor name** | It was `bunny_video_id`, then `panda_video_id`, and the choice was reopened four times in two sittings. Each reopening dragged the schema, a migration, the Zod schemas, the API and the web package along with it, for a value opaque to all of them. `VideoProvider` is where the vendor belongs; in front of that seam nothing should have to know |
 | Provider abstraction        | **Thin, and stops at the player**              | `VideoProvider` covers signing a URL and reading a duration. It does not cover the player: every vendor ships its own embed, so swapping vendors still means rewriting that component. An interface that implied otherwise would sell a portability nobody has                                                                                        |
 
+### The vendor swap point
+
+Exactly two places know which video provider is in use:
+
+    packages/api/src/services/video/     minting a signed URL, reading a duration
+    packages/web/src/components/LessonPlayer.tsx    putting it on screen
+
+Nothing else does — not the schema (the column is `external_video_id`), not the
+unlock rule, not the heartbeat, not the progress view. `LessonPlayer` takes a
+URL, a resume position in seconds, and callbacks; it hands back positions in
+seconds and a playing/paused boolean. That contract survives the change from a
+bare `<video>` to a provider's own `<iframe>`, which is what a watermarked or
+DRM stream will require.
+
 ### Things flagged as risky
 
 - **Per-email rate limiting is a lockout weapon.** Anyone who knows a client's
@@ -453,8 +468,11 @@ pure functions and making them wait on PostgreSQL to be checked would be a
 reason to check them less often. `vitest.config.ts` owns `tests/`,
 `vitest.unit.config.ts` owns `src/`, and the two never overlap.
 
-**20 web tests** cover the error-copy mapping, the login form, the route guard,
-and refresh serialisation.
+**39 web tests** cover the error-copy mapping, the login form, the route guard,
+refresh serialisation, the heartbeat loop and the classroom page. The heartbeat
+tests are the ones worth reading: they pin down that it does not overlap itself
+on a slow connection, that it flushes the tail on pause and unmount, and that a
+motionless player stops reporting.
 
 ---
 

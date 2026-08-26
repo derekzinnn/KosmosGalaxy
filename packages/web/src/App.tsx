@@ -10,6 +10,7 @@ import { TrackEditorPage } from '@/pages/admin/TrackEditorPage';
 import { TracksPage } from '@/pages/admin/TracksPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
+import { LessonPage } from '@/pages/LessonPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import { ResetPasswordPage } from '@/pages/ResetPasswordPage';
@@ -48,6 +49,7 @@ export function App() {
               <Route element={<RequireAuth />}>
                 <Route element={<AppShell />}>
                   <Route path="/" element={<DashboardPage />} />
+                  <Route path="/aulas/:lessonId" element={<LessonPage />} />
 
                   {/* Authoring is Kosmos-only; the guard sends anyone else home. */}
                   <Route element={<RequireAuth allow={['SUPERADMIN']} />}>

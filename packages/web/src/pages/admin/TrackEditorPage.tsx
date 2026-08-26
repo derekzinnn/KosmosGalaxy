@@ -367,7 +367,8 @@ function LessonRow({
   });
 
   const saveVideo = useMutation({
-    mutationFn: () => contentApi.updateLesson(lesson.id, { externalVideoId: videoId.trim() || null }),
+    mutationFn: () =>
+      contentApi.updateLesson(lesson.id, { externalVideoId: videoId.trim() || null }),
     onSuccess: async () => {
       setEditingVideo(false);
       await onChanged();
