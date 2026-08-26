@@ -19,7 +19,7 @@ export interface Lesson {
   isRequired: boolean;
   hasVideo: boolean;
   /** Present only in the Kosmos authoring view; never sent to a client. */
-  bunnyVideoId?: string | null;
+  pandaVideoId?: string | null;
   resources: Resource[];
 }
 
@@ -101,7 +101,7 @@ export const contentApi = {
     body: {
       title: string;
       description?: string | null;
-      bunnyVideoId?: string | null;
+      pandaVideoId?: string | null;
       durationSeconds?: number | null;
       isRequired?: boolean;
     },
@@ -112,7 +112,7 @@ export const contentApi = {
     body: {
       title?: string;
       description?: string | null;
-      bunnyVideoId?: string | null;
+      pandaVideoId?: string | null;
       durationSeconds?: number | null;
       isRequired?: boolean;
     },

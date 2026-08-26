@@ -10,13 +10,13 @@ in, who watched what, who is stuck and who has not started.
 
 ## Status
 
-| Phase       | Scope                                                                         | State       |
-| ----------- | ----------------------------------------------------------------------------- | ----------- |
-| **Phase 0** | Monorepo, database schema, auth, invitations, RBAC, audit log                 | ✅ **Done** |
-| **Phase 1** | Course content CRUD, ordering, publishing, track assignment                   | ✅ **Done** |
-| Phase 2     | Panda Video, signed playback, player, heartbeat telemetry, sequential unlock  | Next        |
-| Phase 3     | Client-facing classroom UI and progress experience                            | Not started |
-| Phase 4     | Admin console: onboarding funnel, per-client drill-down, audit viewer         | Not started |
+| Phase       | Scope                                                                        | State       |
+| ----------- | ---------------------------------------------------------------------------- | ----------- |
+| **Phase 0** | Monorepo, database schema, auth, invitations, RBAC, audit log                | ✅ **Done** |
+| **Phase 1** | Course content CRUD, ordering, publishing, track assignment                  | ✅ **Done** |
+| Phase 2     | Panda Video, signed playback, player, heartbeat telemetry, sequential unlock | Next        |
+| Phase 3     | Client-facing classroom UI and progress experience                           | Not started |
+| Phase 4     | Admin console: onboarding funnel, per-client drill-down, audit viewer        | Not started |
 
 ---
 
@@ -290,14 +290,14 @@ messages and identifiers are **English**.
 | Publishing               | **Validated, and reports every problem at once** | A track a client cannot finish is worse than one they cannot start. Empty track, empty module, and a required lesson with no video all block publication, and the endpoint returns the whole list so the fix is one pass rather than a game of whack-a-mole. `GET /tracks/:id/readiness` answers the same question without attempting to publish                                                                                         |
 | Deleting content         | **Blocked when it would erase history**          | A published or assigned track cannot be deleted, and neither can a lesson or module a client has already started — the schema cascades to `LessonProgress`, so a careless click would silently erase what someone watched. The guard is in place now even though Phase 2 writes the first such row                                                                                                                                       |
 | Route shape              | **`/modules/:id`, not `/tracks/:t/modules/:m`**  | Ids are unique, so the ancestry in a URL adds nothing except a second source of truth that can disagree with the database                                                                                                                                                                                                                                                                                                                |
-| `bunnyVideoId` exposure  | **Staff only; clients get `hasVideo`**           | Phase 2 serves playback through a signed URL. A raw video id reaching a client browser now would make that pointless later, so the client mapper never includes it                                                                                                                                                                                                                                                                       |
+| `pandaVideoId` exposure  | **Staff only; clients get `hasVideo`**           | Phase 2 serves playback through a signed URL. A raw video id reaching a client browser now would make that pointless later, so the client mapper never includes it                                                                                                                                                                                                                                                                       |
 | Client-facing reads      | **Through `TrackAssignment`**                    | See **Known limits**. The guarded side of the relation is the only side that can be checked                                                                                                                                                                                                                                                                                                                                              |
 | A minimal Clients screen | **Added, though the console is Phase 4**         | Without a way to create a company and invite its owner, the assign dropdown is permanently empty and Phase 1 cannot be used at all. The funnel, drill-down and audit viewer remain Phase 4                                                                                                                                                                                                                                               |
 
 ### Decisions taken ahead of Phase 2
 
-| Decision     | Choice                            | Why                                                                                                                                                                                                                                                                                                                                                       |
-| ------------ | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Decision     | Choice                            | Why                                                                                                                                                                                                                                                                                                                                                          |
+| ------------ | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Video vendor | **Panda Video, not Bunny Stream** | Kosmos intends to sell courses later. That turns the Panda feature set — per-viewer dynamic watermark, DRM, domain lock — from something this onboarding platform does not need into the thing that protects the product. Choosing it now costs one column rename; choosing it after Phase 2 costs the integration plus re-uploading the whole video library |
 
 **What this trades away, knowingly.** Bunny is cheaper per GB at low volume and
@@ -396,7 +396,7 @@ calling the data layer directly.
 library is shared on purpose — one Track row, many companies — so the question
 is not "can Alfa read Beta's track?" but "can Alfa discover that Beta was given
 anything at all?". It proves a client sees only their own assignments, only
-published ones, never the Bunny video id, and cannot reach an authoring endpoint
+published ones, never the Panda video id, and cannot reach an authoring endpoint
 even for a track they legitimately have.
 
 **20 web tests** cover the error-copy mapping, the login form, the route guard,
@@ -409,7 +409,7 @@ and refresh serialisation.
 Phase 2 adds Panda Video, signed playback, the player, heartbeat telemetry and
 sequential unlock. What Phase 1 already put in place for it:
 
-- **`bunnyVideoId` never leaves the API for a client.** `toPublicLesson` sends
+- **`pandaVideoId` never leaves the API for a client.** `toPublicLesson` sends
   `hasVideo: boolean` instead. Phase 2 should add an endpoint that mints a
   short-lived signed URL per lesson, checked against the caller's assignment —
   not one that hands over the id.
@@ -424,6 +424,3 @@ sequential unlock. What Phase 1 already put in place for it:
   the whole list. Code may rely on that.
 - **`durationSeconds` is authored by hand today.** Panda reports the real
   duration; Phase 2 should fill it from the API rather than trusting the form.
-- **The schema still says `bunny_video_id`.** Renaming it to `panda_video_id` is
-  the first task of Phase 2, before anything is written against it. Nothing has
-  reached production, so the rename is a migration nobody has to live through.

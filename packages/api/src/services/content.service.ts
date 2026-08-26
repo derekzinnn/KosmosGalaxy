@@ -251,7 +251,7 @@ export async function findPublishProblems(
 
     for (const lesson of module.lessons) {
       // A required lesson with no video is a wall the client cannot get past.
-      if (lesson.isRequired && !lesson.bunnyVideoId) {
+      if (lesson.isRequired && !lesson.pandaVideoId) {
         problems.push({
           code: 'LESSON_MISSING_VIDEO',
           message: `A aula obrigatória "${lesson.title}" ainda não tem vídeo.`,
@@ -476,7 +476,7 @@ export function reorderModules(
 export interface LessonCommand {
   readonly title: string;
   readonly description?: string | null;
-  readonly bunnyVideoId?: string | null;
+  readonly pandaVideoId?: string | null;
   readonly durationSeconds?: number | null;
   readonly isRequired?: boolean;
 }
@@ -491,7 +491,7 @@ export function createLesson(context: RequestContext, moduleId: string, command:
         moduleId,
         title: command.title,
         description: command.description ?? null,
-        bunnyVideoId: command.bunnyVideoId ?? null,
+        pandaVideoId: command.pandaVideoId ?? null,
         durationSeconds: command.durationSeconds ?? null,
         isRequired: command.isRequired ?? true,
         order: await content.nextLessonOrder(tx, moduleId),
@@ -527,7 +527,7 @@ export function updateLesson(
       const updated = await content.updateLesson(tx, lessonId, {
         ...(command.title === undefined ? {} : { title: command.title }),
         ...(command.description === undefined ? {} : { description: command.description }),
-        ...(command.bunnyVideoId === undefined ? {} : { bunnyVideoId: command.bunnyVideoId }),
+        ...(command.pandaVideoId === undefined ? {} : { pandaVideoId: command.pandaVideoId }),
         ...(command.durationSeconds === undefined
           ? {}
           : { durationSeconds: command.durationSeconds }),
@@ -540,8 +540,8 @@ export function updateLesson(
         tenantId: null,
         entityType: AuditEntity.LESSON,
         entityId: lessonId,
-        before: { title: existing.title, hasVideo: existing.bunnyVideoId !== null },
-        after: { title: updated.title, hasVideo: updated.bunnyVideoId !== null },
+        before: { title: existing.title, hasVideo: existing.pandaVideoId !== null },
+        after: { title: updated.title, hasVideo: updated.pandaVideoId !== null },
         request: metadataOf(context),
       });
 

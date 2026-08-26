@@ -115,7 +115,7 @@ export async function createLessonHandler(req: Request, res: Response): Promise<
   const lesson = await contentService.createLesson(requireContext(req), param(req, 'moduleId'), {
     title: body.title,
     description: body.description ?? null,
-    bunnyVideoId: body.bunnyVideoId ?? null,
+    pandaVideoId: body.pandaVideoId ?? null,
     durationSeconds: body.durationSeconds ?? null,
     isRequired: body.isRequired,
   });

@@ -198,7 +198,7 @@ model Lesson {
   title           String
   description     String?
   order           Int      @map("sort_order")
-  bunnyVideoId    String?  @map("bunny_video_id")
+  pandaVideoId    String?  @map("panda_video_id")
   durationSeconds Int?     @map("duration_seconds")
   isRequired      Boolean  @default(true) @map("is_required")
   createdAt       DateTime @default(now()) @map("created_at")

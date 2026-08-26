@@ -1,0 +1,11 @@
+-- Panda Video replaces Bunny Stream as the video vendor.
+-- See CLAUDE.md, "Decisions taken ahead of Phase 2".
+--
+-- RENAME rather than drop-and-add. The column is nullable and empty in every
+-- environment today, so a drop would be harmless right now — but if some
+-- environment did get a row in, RENAME is the one that keeps the value. The
+-- cheap correct statement costs nothing over the cheap careless one.
+--
+-- Indexes and constraints follow a renamed column automatically; there are
+-- none on this one either way.
+ALTER TABLE "lessons" RENAME COLUMN "bunny_video_id" TO "panda_video_id";

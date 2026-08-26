@@ -38,8 +38,8 @@ export const updateModuleSchema = z
 export const lessonSchema = z.object({
   title,
   description,
-  /** Bunny's own identifier. Phase 2 turns it into a signed playback URL. */
-  bunnyVideoId: z.string().trim().min(1).max(200).nullish(),
+  /** Panda's own identifier. Phase 2 turns it into a signed playback URL. */
+  pandaVideoId: z.string().trim().min(1).max(200).nullish(),
   durationSeconds: z.number().int().positive().max(86_400).nullish(),
   isRequired: z.boolean().optional(),
 });

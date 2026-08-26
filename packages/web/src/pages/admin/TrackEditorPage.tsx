@@ -349,7 +349,7 @@ function LessonRow({
   onError,
 }: LessonRowProps) {
   const [editingVideo, setEditingVideo] = useState(false);
-  const [videoId, setVideoId] = useState(lesson.bunnyVideoId ?? '');
+  const [videoId, setVideoId] = useState(lesson.pandaVideoId ?? '');
 
   const move = useMutation({
     mutationFn: async (direction: -1 | 1) => {
@@ -367,7 +367,7 @@ function LessonRow({
   });
 
   const saveVideo = useMutation({
-    mutationFn: () => contentApi.updateLesson(lesson.id, { bunnyVideoId: videoId.trim() || null }),
+    mutationFn: () => contentApi.updateLesson(lesson.id, { pandaVideoId: videoId.trim() || null }),
     onSuccess: async () => {
       setEditingVideo(false);
       await onChanged();
@@ -449,7 +449,7 @@ function LessonRow({
         >
           <div className="min-w-48 flex-1">
             <FormField
-              label="ID do vídeo no Bunny"
+              label="ID do vídeo no Panda"
               value={videoId}
               autoFocus
               placeholder="ex.: 8f2c1a90-…"
