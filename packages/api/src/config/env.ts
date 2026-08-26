@@ -48,7 +48,18 @@ const envSchema = z
 
     VIDEO_PROVIDER: z.enum(['fake', 'panda']).default('fake'),
     PANDA_API_KEY: z.string().min(1).optional(),
+    /** Also called the pullzone name. Looks like `vz-6a0bfc2c-30b`. */
     PANDA_LIBRARY_ID: z.string().min(1).optional(),
+    /**
+     * The watermark group that burns the viewer's identity into playback.
+     *
+     * This is the feature Panda was chosen for, and it is not part of the API
+     * key: a group is created separately and carries its own secret, which
+     * signs the JWT the player receives. Without both, playback still works
+     * and a leaked recording is untraceable — which was the whole point.
+     */
+    PANDA_WATERMARK_GROUP_ID: z.string().min(1).optional(),
+    PANDA_WATERMARK_SECRET: z.string().min(1).optional(),
 
     /**
      * How long a minted playback URL stays valid. Long enough to start a
