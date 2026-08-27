@@ -9,7 +9,34 @@ import { assertQueryIsTenantScoped } from './tenant-guard.js';
  * them to a real Node driver, so a driver adapter is mandatory — think of
  * Prisma as writing the letter and `pg` as the postman who delivers it.
  */
-const adapter = new PrismaPg({ connectionString: env.databaseUrl });
+
+/**
+ * The schema named in the connection string, or `public`.
+ *
+ * **This has to be passed to the adapter explicitly, and forgetting it fails
+ * silently in the worst possible way.** `?schema=` was a parameter Prisma's
+ * own engine understood. With a driver adapter the URL goes to `pg`, which
+ * does not know that parameter and quietly ignores it — so every query lands
+ * in `public` while everything else in the process believes otherwise.
+ *
+ * That is not a hypothetical. A test run pointed at `?schema=kosmos_test`
+ * wrote its fixtures straight into the development schema, and the only
+ * reason it was noticed is that the assertions read the schema that stayed
+ * empty. Had they agreed, the suite would have passed while truncating real
+ * data between tests.
+ */
+function schemaFromUrl(url: string): string {
+  try {
+    return new URL(url).searchParams.get('schema') ?? 'public';
+  } catch {
+    return 'public';
+  }
+}
+
+const adapter = new PrismaPg(
+  { connectionString: env.databaseUrl },
+  { schema: schemaFromUrl(env.databaseUrl) },
+);
 
 const basePrisma = new PrismaClient({
   adapter,

@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { execFileSync } from 'node:child_process';
+import { execSync } from 'node:child_process';
 
 /**
  * Brings the test database up to the current schema, once per run.
@@ -19,7 +19,21 @@ export default function setup(): void {
     );
   }
 
-  execFileSync('npx', ['prisma', 'migrate', 'deploy'], {
+  /*
+   * `execSync` with one literal string, rather than execFileSync with an
+   * argument array. Two Windows facts force this:
+   *
+   *   - `npx` is `npx.cmd`, and execFileSync matches a literal filename
+   *     instead of searching PATHEXT — a bare 'npx' throws ENOENT.
+   *   - Naming `npx.cmd` outright then throws EINVAL: since the fix for
+   *     CVE-2024-27980, Node refuses to spawn .cmd and .bat without a shell.
+   *
+   * So a shell is required. Passing an argument array alongside `shell: true`
+   * is deprecated (DEP0190) because the arguments are concatenated rather
+   * than escaped — which is exactly why this passes one fixed string with
+   * nothing interpolated into it.
+   */
+  execSync('npx prisma migrate deploy', {
     env: { ...process.env, DATABASE_URL: databaseUrl },
     stdio: 'pipe',
   });
