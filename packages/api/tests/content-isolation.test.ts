@@ -5,6 +5,7 @@ import { api, bearer, loginAs, useCapturingEmails } from './helpers/api.js';
 import { rawQuery, readAuditActions } from './helpers/database.js';
 import {
   assignTrackToTenant,
+  completeLesson,
   createPublishedTrack,
   createSuperadmin,
   createTenantWithUsers,
@@ -51,6 +52,36 @@ describe('content visibility between clients', () => {
     const titles = response.body.tracks.map((track: { title: string }) => track.title);
     expect(titles).toEqual(['Onboarding Comum']);
     expect(titles).not.toContain('Onboarding da Beta');
+  });
+
+  it('reports how far the client has got through each trilha', async () => {
+    const response = await asAlpha('/tracks/mine').expect(200);
+    const track = response.body.tracks.find(
+      (item: { title: string }) => item.title === 'Onboarding Comum',
+    );
+
+    // A fresh assignment: nothing watched, nothing complete, and the next
+    // lesson is the first one.
+    expect(track.progress.percent).toBe(0);
+    expect(track.progress.completed).toBe(false);
+    expect(track.progress.started).toBe(false);
+    expect(track.progress.nextLessonId).toBe(shared.lesson.id);
+  });
+
+  it('counts a completed lesson toward the trilha percentage', async () => {
+    await completeLesson(alpha.owner.id, shared.lesson.id, alpha.tenant.id);
+
+    const response = await asAlpha('/tracks/mine').expect(200);
+    const track = response.body.tracks.find(
+      (item: { title: string }) => item.title === 'Onboarding Comum',
+    );
+
+    // The trilha has one required lesson; finishing it is 100%.
+    expect(track.progress.completedLessons).toBe(1);
+    expect(track.progress.totalLessons).toBe(1);
+    expect(track.progress.percent).toBe(100);
+    expect(track.progress.completed).toBe(true);
+    expect(track.progress.nextLessonId).toBeNull();
   });
 
   it('hides an unpublished track even when it is assigned', async () => {

@@ -8,6 +8,7 @@ import {
   removeAssignment,
 } from '../repositories/assignment.repository.js';
 import { findTrackById } from '../repositories/content.repository.js';
+import { listProgressForLessons } from '../repositories/progress.repository.js';
 import { findTenantById } from '../repositories/tenant.repository.js';
 import type { RequestContext } from '../types/request-context.js';
 import { metadataOf } from '../types/request-context.js';
@@ -15,6 +16,7 @@ import { AuditAction, AuditEntity } from './audit.actions.js';
 import { audit } from './audit.service.js';
 import type { PublicTrack } from './content.mapper.js';
 import { toPublicTrack } from './content.mapper.js';
+import { isTrackComplete, lessonsInOrder, nextLessonId } from './unlock.js';
 import { runAsContext, runAsSuperadminOnTenant } from './scope.service.js';
 
 /**
@@ -106,12 +108,75 @@ export function unassignTrack(
  * they use the authoring endpoints instead. That is deliberate rather than an
  * oversight: it keeps "what a client sees" a question with exactly one answer.
  */
-export function listMyTracks(context: RequestContext): Promise<PublicTrack[]> {
+/**
+ * A client's trilha, with how far through it they are.
+ *
+ * Progress is counted over *required* lessons only, matching the completion
+ * rule: an optional extra never stands between a client and 100%. `percent` is
+ * that fraction rounded, `nextLesson` is where "continuar" should go, and
+ * `started` is whether they have any watch history at all — the difference
+ * between "Em andamento" and a fresh trilha the classroom has not touched yet.
+ */
+export interface TrackProgressSummary {
+  readonly totalLessons: number;
+  readonly completedLessons: number;
+  readonly percent: number;
+  readonly completed: boolean;
+  readonly started: boolean;
+  readonly nextLessonId: string | null;
+}
+
+export interface MyTrack extends PublicTrack {
+  readonly progress: TrackProgressSummary;
+}
+
+export function listMyTracks(context: RequestContext): Promise<MyTrack[]> {
   return runAsContext(context, async (db) => {
     if (context.role === 'SUPERADMIN') return [];
 
     const assignments = await listAssignedTracks(db);
+    const tracks = assignments.map((assignment) => assignment.track);
 
-    return assignments.map((assignment) => toPublicTrack(assignment.track, { forAdmin: false }));
+    // One progress query for every lesson across every trilha, rather than one
+    // per track: the classroom already proved these rows are cheap to read.
+    const allLessonIds = tracks.flatMap((track) =>
+      (track.modules ?? []).flatMap((module) => module.lessons.map((lesson) => lesson.id)),
+    );
+    const progressRows = await listProgressForLessons(db, context.userId, allLessonIds);
+    const completed = new Set(
+      progressRows.filter((row) => row.completedAt !== null).map((row) => row.lessonId),
+    );
+    const started = new Set(progressRows.map((row) => row.lessonId));
+
+    return tracks.map((track) => {
+      const ordered = lessonsInOrder(
+        (track.modules ?? []).map((module) => ({
+          id: module.id,
+          order: module.order,
+          lessons: module.lessons.map((lesson) => ({
+            id: lesson.id,
+            order: lesson.order,
+            isRequired: lesson.isRequired,
+          })),
+        })),
+      );
+
+      const required = ordered.filter((lesson) => lesson.isRequired);
+      const doneRequired = required.filter((lesson) => completed.has(lesson.id)).length;
+      const percent =
+        required.length === 0 ? 0 : Math.round((doneRequired / required.length) * 100);
+
+      return {
+        ...toPublicTrack(track, { forAdmin: false }),
+        progress: {
+          totalLessons: required.length,
+          completedLessons: doneRequired,
+          percent,
+          completed: isTrackComplete(ordered, completed),
+          started: ordered.some((lesson) => started.has(lesson.id)),
+          nextLessonId: nextLessonId(ordered, completed),
+        },
+      };
+    });
   });
 }

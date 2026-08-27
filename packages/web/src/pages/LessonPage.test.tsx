@@ -43,6 +43,14 @@ const track = {
   published: true,
   createdAt: '2026-08-01T00:00:00.000Z',
   updatedAt: '2026-08-01T00:00:00.000Z',
+  progress: {
+    totalLessons: 3,
+    completedLessons: 1,
+    percent: 33,
+    completed: false,
+    started: true,
+    nextLessonId: 'lesson-2',
+  },
   modules: [
     {
       id: 'module-1',

@@ -70,6 +70,19 @@ export interface LibraryVideo {
   inUse?: boolean;
 }
 
+export interface TrackProgressSummary {
+  totalLessons: number;
+  completedLessons: number;
+  percent: number;
+  completed: boolean;
+  started: boolean;
+  nextLessonId: string | null;
+}
+
+export interface MyTrack extends Track {
+  progress: TrackProgressSummary;
+}
+
 export const contentApi = {
   /** The Panda library, for the authoring video picker. Staff only. */
   listVideos: () => request<{ videos: LibraryVideo[] }>('/videos'),
@@ -151,8 +164,8 @@ export const contentApi = {
   unassign: (trackId: string, tenantId: string) =>
     request<void>(`/tracks/${trackId}/assignments/${tenantId}`, { method: 'DELETE' }),
 
-  /** The caller's own company's published tracks. */
-  myTracks: () => request<{ tracks: Track[] }>('/tracks/mine'),
+  /** The caller's own company's published tracks, with their progress. */
+  myTracks: () => request<{ tracks: MyTrack[] }>('/tracks/mine'),
 };
 
 export interface CreatedInvitation {
