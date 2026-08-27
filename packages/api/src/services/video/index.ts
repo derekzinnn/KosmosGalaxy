@@ -54,4 +54,4 @@ export function setVideoProvider(next: VideoProvider): void {
   provider = next;
 }
 
-export type { SignedPlayback, VideoProvider, Viewer } from './video-provider.js';
+export type { SignedPlayback, VideoProvider, VideoSummary, Viewer } from './video-provider.js';

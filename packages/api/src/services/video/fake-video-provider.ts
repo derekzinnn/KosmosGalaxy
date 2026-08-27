@@ -1,7 +1,7 @@
 import { createHmac } from 'node:crypto';
 import { env } from '../../config/env.js';
 import { logger } from '../../lib/logger.js';
-import type { SignedPlayback, VideoProvider, Viewer } from './video-provider.js';
+import type { SignedPlayback, VideoProvider, VideoSummary, Viewer } from './video-provider.js';
 
 /**
  * Development and test provider: mints a URL that plays nothing.
@@ -48,5 +48,25 @@ export class FakeVideoProvider implements VideoProvider {
    */
   fetchDurationSeconds(): Promise<number | null> {
     return Promise.resolve(null);
+  }
+
+  /** A fixed library, enough to build and test the picker without a vendor. */
+  listVideos(): Promise<VideoSummary[]> {
+    return Promise.resolve([
+      {
+        id: 'fake-video-1',
+        title: 'Vídeo de exemplo — boas-vindas',
+        durationSeconds: 300,
+        ready: true,
+        thumbnailUrl: null,
+      },
+      {
+        id: 'fake-video-2',
+        title: 'Vídeo de exemplo — ainda convertendo',
+        durationSeconds: null,
+        ready: false,
+        thumbnailUrl: null,
+      },
+    ]);
   }
 }

@@ -1,6 +1,6 @@
 import { SignJWT } from 'jose';
 import { logger } from '../../lib/logger.js';
-import type { SignedPlayback, VideoProvider, Viewer } from './video-provider.js';
+import type { SignedPlayback, VideoProvider, VideoSummary, Viewer } from './video-provider.js';
 
 interface PandaConfig {
   readonly apiKey: string;
@@ -78,6 +78,11 @@ export class PandaVideoProvider implements VideoProvider {
     return { url, expiresAt };
   }
 
+  /** The library, for the authoring picker. See `listVideosImpl` below. */
+  listVideos(): Promise<VideoSummary[]> {
+    return listVideosImpl(this.config.apiKey);
+  }
+
   /**
    * The real duration, from `GET /videos/{id}`.
    *
@@ -112,6 +117,55 @@ export class PandaVideoProvider implements VideoProvider {
 
     return seconds !== null && seconds > 0 ? Math.round(seconds) : null;
   }
+}
+
+/**
+ * The library, from GET /videos.
+ *
+ * Maps to the id the *player* embeds with — `video_external_id`, confirmed
+ * against the URL Panda itself returns in `video_player`. Using the row `id`
+ * would attach a video that signs fine and then never loads. A video with no
+ * external id yet is still encoding and is dropped rather than offered.
+ */
+async function listVideosImpl(apiKey: string): Promise<VideoSummary[]> {
+  let response: Response;
+  try {
+    response = await fetch('https://api-v2.pandavideo.com.br/videos?limit=200', {
+      headers: { Authorization: apiKey },
+    });
+  } catch (error) {
+    throw new Error('Não foi possível consultar a biblioteca do Panda.', { cause: error });
+  }
+  if (!response.ok) {
+    throw new Error(`Panda respondeu ${String(response.status)} ao listar os vídeos.`);
+  }
+  const body: unknown = await response.json().catch(() => null);
+  const raw = extractVideos(body);
+
+  return raw
+    .map((v): VideoSummary | null => {
+      const id = typeof v.video_external_id === 'string' ? v.video_external_id : null;
+      if (!id) return null;
+      const length =
+        typeof v.length === 'number' && Number.isFinite(v.length) ? Math.round(v.length) : null;
+      return {
+        id,
+        title: typeof v.title === 'string' ? v.title : id,
+        durationSeconds: length,
+        ready: v.status === 'CONVERTED' && v.playable === true,
+        thumbnailUrl: typeof v.thumbnail === 'string' ? v.thumbnail : null,
+      };
+    })
+    .filter((v): v is VideoSummary => v !== null);
+}
+
+function extractVideos(body: unknown): Record<string, unknown>[] {
+  if (Array.isArray(body)) return body as Record<string, unknown>[];
+  if (typeof body === 'object' && body !== null) {
+    const list = (body as { videos?: unknown }).videos;
+    if (Array.isArray(list)) return list as Record<string, unknown>[];
+  }
+  return [];
 }
 
 /**

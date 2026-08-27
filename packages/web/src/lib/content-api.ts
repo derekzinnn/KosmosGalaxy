@@ -60,7 +60,18 @@ export interface Tenant {
   status: string;
 }
 
+export interface LibraryVideo {
+  id: string;
+  title: string;
+  durationSeconds: number | null;
+  ready: boolean;
+  thumbnailUrl: string | null;
+}
+
 export const contentApi = {
+  /** The Panda library, for the authoring video picker. Staff only. */
+  listVideos: () => request<{ videos: LibraryVideo[] }>('/videos'),
+
   listTracks: () => request<{ tracks: Track[] }>('/tracks'),
 
   getTrack: (trackId: string) => request<{ track: Track }>(`/tracks/${trackId}`),

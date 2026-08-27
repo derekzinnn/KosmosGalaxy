@@ -16,6 +16,21 @@ export interface Viewer {
   readonly ip: string;
 }
 
+/**
+ * One video in the provider's library, as an author needs to see it when
+ * choosing which one a lesson plays. The id here is the one the *player*
+ * embeds with — for Panda that is `video_external_id`, not the row id, a
+ * distinction that otherwise attaches a video that never loads.
+ */
+export interface VideoSummary {
+  readonly id: string;
+  readonly title: string;
+  readonly durationSeconds: number | null;
+  /** Only a ready video can be attached; the picker hides the rest. */
+  readonly ready: boolean;
+  readonly thumbnailUrl: string | null;
+}
+
 export interface SignedPlayback {
   /** Short-lived, viewer-specific. Never cache this across users. */
   readonly url: string;
@@ -61,4 +76,13 @@ export interface VideoProvider {
    * silently decides whether somebody "finished" the lesson.
    */
   fetchDurationSeconds(videoId: string): Promise<number | null>;
+
+  /**
+   * The provider's library, for the authoring picker.
+   *
+   * Staff-only upstream: this is how an author chooses a video without ever
+   * pasting an id, and without the browser ever seeing the API key. Returns
+   * ready and not-yet-ready videos alike; the caller decides what to show.
+   */
+  listVideos(): Promise<VideoSummary[]>;
 }
