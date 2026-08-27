@@ -396,8 +396,37 @@ Nothing else does — not the schema (the column is `external_video_id`), not th
 unlock rule, not the heartbeat, not the progress view. `LessonPlayer` takes a
 URL, a resume position in seconds, and callbacks; it hands back positions in
 seconds and a playing/paused boolean. That contract survives the change from a
-bare `<video>` to a provider's own `<iframe>`, which is what a watermarked or
-DRM stream will require.
+bare `<video>` to Panda's `<iframe>`, which the watermark requires — the
+watermark lives inside Panda's own player, so a plain `<video>` could never
+carry it. That swap touched only `LessonPlayer` and the video service.
+
+### Phase 2 is wired to Panda, and verified
+
+The provider is real, not a stub. `PandaVideoProvider` signs a per-viewer
+watermark JWT (HS256, `jose`, the group secret) and returns Panda's embed URL;
+`fetchDurationSeconds` reads `GET /videos/{id}`. Verified against a real
+uploaded video through the HTTP API: `/lessons/:id/playback` returns a URL on
+the configured library with a watermark token, and the real duration comes
+back correct.
+
+**Panda's protection is not an expiring URL.** There is no timestamped HMAC
+link the way Bunny signs one. Three things protect a video together: the
+per-viewer watermark (traceability), domain lock in the dashboard (a pasted
+link will not play off an allowed domain), and the unlock and assignment checks
+upstream. `expiresInSeconds` bounds the watermark token, and `expiresAt` still
+means what it says.
+
+**The video id is Panda's UUID, not the file title.** `da44...` not
+`qph-nyfp-rhu`. Pasting the title silently attaches nothing. A video picker
+that lists the library and hands back the id is the fix, and is the next piece
+of authoring UI.
+
+**One thing not yet seen on the wire:** `panda_timeupdate` is confirmed from
+the docs and the player is built around it, but no live stream has been watched
+here to confirm the field arrives as documented. If progress does not advance
+when a client plays a lesson, that is the place to look — the player derives
+playing/paused from that message's cadence on purpose, so a renamed field is a
+one-line fix.
 
 ### Things flagged as risky
 
@@ -413,10 +442,6 @@ DRM stream will require.
   as it likes. The fix is a floor on how often an event is written (the
   aggregate would still update); it is not in yet, and it is the first thing
   to add before this endpoint meets real traffic.
-- **The Panda provider is a stub.** `VIDEO_PROVIDER=panda` throws at first use
-  with a checklist. Everything upstream of it is finished and exercised
-  against `FakeVideoProvider`; only the last hop is missing, and it needs the
-  vendor's signing scheme rather than a guess at it.
 - **`SameSite=Lax` constrains DNS.** See **Infra requirements**.
 - **In-memory rate limiting does not survive a second instance.** Fine on one
   container; the moment the API scales horizontally the limits become
