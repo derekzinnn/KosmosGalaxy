@@ -38,6 +38,20 @@ export interface PublicInvitation {
   readonly createdAt: string;
 }
 
+/**
+ * What creating an invitation returns, once.
+ *
+ * The `acceptUrl` carries the raw token, which the database only ever stores
+ * hashed — so it exists in exactly this one response and nowhere after. That
+ * is deliberate: it is a magic link, and a magic link that can be looked up
+ * later is not one. While email is console-only, this is how the staff member
+ * who created the invite gets the link to hand over; a real email provider
+ * later sends it instead and this field can stop being read.
+ */
+export interface CreatedInvitation extends PublicInvitation {
+  readonly acceptUrl: string;
+}
+
 function toPublicInvitation(invitation: Prisma.InvitationModel): PublicInvitation {
   return {
     id: invitation.id,
@@ -75,7 +89,7 @@ export interface CreateInvitationCommand {
 export async function createInvitation(
   context: RequestContext,
   command: CreateInvitationCommand,
-): Promise<PublicInvitation> {
+): Promise<CreatedInvitation> {
   const email = normalizeEmail(command.email);
 
   const allowedRoles = INVITABLE_ROLES[context.role];
@@ -113,6 +127,7 @@ export async function createInvitation(
     }
 
     const rawToken = generateOpaqueToken();
+    const acceptUrl = `${env.WEB_APP_URL}/invite/${rawToken}`;
     const expiresAt = new Date(Date.now() + env.INVITATION_TTL_SECONDS * 1000);
 
     const invitation = await prisma.$transaction(async (tx) => {
@@ -156,12 +171,12 @@ export async function createInvitation(
         to: email,
         tenantName,
         inviterName: context.email,
-        acceptUrl: `${env.WEB_APP_URL}/invite/${rawToken}`,
+        acceptUrl,
         expiresInDays: Math.round(env.INVITATION_TTL_SECONDS / 86_400),
       }),
     );
 
-    return toPublicInvitation(invitation);
+    return { ...toPublicInvitation(invitation), acceptUrl };
   });
 }
 

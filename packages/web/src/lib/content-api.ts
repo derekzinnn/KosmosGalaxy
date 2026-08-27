@@ -153,6 +153,19 @@ export const contentApi = {
   myTracks: () => request<{ tracks: Track[] }>('/tracks/mine'),
 };
 
+export interface CreatedInvitation {
+  id: string;
+  email: string;
+  role: string;
+  /** The one-time magic link. Present only on creation; never listed later. */
+  acceptUrl: string;
+}
+
+export const invitationApi = {
+  create: (body: { email: string; role: 'CLIENT_OWNER' | 'CLIENT_MEMBER'; tenantId: string }) =>
+    request<{ invitation: CreatedInvitation }>('/invitations', { method: 'POST', body }),
+};
+
 export const tenantApi = {
   list: () => request<{ tenants: Tenant[] }>('/tenants'),
 
