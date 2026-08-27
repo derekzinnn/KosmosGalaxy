@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Modal, ModalClose, ModalContent } from '@/components/ui/modal';
 import { fieldErrorsFrom, messageFor } from '@/lib/api-error';
 import { invitationApi, tenantApi } from '@/lib/content-api';
-import { slugify } from '@/lib/utils';
+import { isValidEmail, slugify } from '@/lib/utils';
 
 /**
  * Cadastrar um cliente é, na prática, duas coisas que sempre andam juntas:
@@ -28,13 +28,19 @@ export function NewClientModal({ children }: { children: React.ReactNode }) {
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [emailTouched, setEmailTouched] = useState(false);
   const [result, setResult] = useState<{ email: string; acceptUrl: string } | null>(null);
+
+  // Shown only once the field has been left, so the message does not nag while
+  // an address is still being typed.
+  const emailInvalid = emailTouched && email.trim() !== '' && !isValidEmail(email);
 
   function reset() {
     setName('');
     setEmail('');
     setError(null);
     setFieldErrors({});
+    setEmailTouched(false);
     setResult(null);
   }
 
@@ -60,7 +66,7 @@ export function NewClientModal({ children }: { children: React.ReactNode }) {
     },
   });
 
-  const canSubmit = name.trim().length >= 2 && email.includes('@');
+  const canSubmit = name.trim().length >= 2 && isValidEmail(email);
 
   return (
     <Modal
@@ -122,8 +128,9 @@ export function NewClientModal({ children }: { children: React.ReactNode }) {
               placeholder="responsavel@empresa.com.br"
               required
               value={email}
-              error={fieldErrors.email}
+              error={fieldErrors.email ?? (emailInvalid ? 'Informe um e-mail válido.' : undefined)}
               onChange={(event) => setEmail(event.target.value)}
+              onBlur={() => setEmailTouched(true)}
             />
 
             <div className="flex justify-end gap-3 pt-1">

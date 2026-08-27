@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Modal, ModalClose, ModalContent } from '@/components/ui/modal';
 import { fieldErrorsFrom, messageFor } from '@/lib/api-error';
 import { invitationApi } from '@/lib/content-api';
+import { isValidEmail } from '@/lib/utils';
 
 /**
  * Invite (or re-invite) the person who owns a client's onboarding, for a
@@ -26,12 +27,16 @@ export function InviteOwnerModal({
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [emailTouched, setEmailTouched] = useState(false);
   const [result, setResult] = useState<{ email: string; acceptUrl: string } | null>(null);
+
+  const emailInvalid = emailTouched && email.trim() !== '' && !isValidEmail(email);
 
   function reset() {
     setEmail('');
     setError(null);
     setFieldErrors({});
+    setEmailTouched(false);
     setResult(null);
   }
 
@@ -89,8 +94,9 @@ export function InviteOwnerModal({
               required
               autoFocus
               value={email}
-              error={fieldErrors.email}
+              error={fieldErrors.email ?? (emailInvalid ? 'Informe um e-mail válido.' : undefined)}
               onChange={(event) => setEmail(event.target.value)}
+              onBlur={() => setEmailTouched(true)}
             />
 
             <div className="flex justify-end gap-3 pt-1">
@@ -99,7 +105,7 @@ export function InviteOwnerModal({
                   Cancelar
                 </Button>
               </ModalClose>
-              <Button type="submit" loading={invite.isPending} disabled={!email.includes('@')}>
+              <Button type="submit" loading={invite.isPending} disabled={!isValidEmail(email)}>
                 Gerar convite
               </Button>
             </div>

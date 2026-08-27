@@ -24,3 +24,14 @@ export function slugify(value: string): string {
     .replace(/^-+|-+$/g, '')
     .slice(0, 60);
 }
+
+/**
+ * A pragmatic e-mail check for gating a form: something before the @, a
+ * domain with a dot after it, no spaces. It is not RFC-perfect on purpose —
+ * the server validates for real, and a regex strict enough to match the RFC
+ * rejects addresses that actually work. This just stops the obvious mistakes
+ * (a missing local part, a bare domain) before anything is created.
+ */
+export function isValidEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
