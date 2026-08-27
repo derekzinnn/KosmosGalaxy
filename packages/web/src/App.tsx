@@ -7,6 +7,7 @@ import { RootErrorBoundary } from '@/components/RootErrorBoundary';
 import { ThemeProvider } from '@/theme/ThemeProvider';
 import { AcceptInvitePage } from '@/pages/AcceptInvitePage';
 import { ClientsPage } from '@/pages/admin/ClientsPage';
+import { LessonPreviewPage } from '@/pages/admin/LessonPreviewPage';
 import { TrackEditorPage } from '@/pages/admin/TrackEditorPage';
 import { TracksPage } from '@/pages/admin/TracksPage';
 import { DashboardPage } from '@/pages/DashboardPage';
@@ -58,6 +59,10 @@ export function App() {
                       <Route path="/admin/clients" element={<ClientsPage />} />
                       <Route path="/admin/tracks" element={<TracksPage />} />
                       <Route path="/admin/tracks/:trackId" element={<TrackEditorPage />} />
+                      <Route
+                        path="/admin/tracks/:trackId/preview"
+                        element={<LessonPreviewPage />}
+                      />
                     </Route>
                   </Route>
                 </Route>
