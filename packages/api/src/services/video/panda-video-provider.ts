@@ -1,60 +1,133 @@
+import { SignJWT } from 'jose';
+import { logger } from '../../lib/logger.js';
 import type { SignedPlayback, VideoProvider, Viewer } from './video-provider.js';
 
+interface PandaConfig {
+  readonly apiKey: string;
+  /** The pull-zone name, e.g. `vz-a7b51d2b-af7`. */
+  readonly libraryId: string;
+  readonly watermarkGroupId: string;
+  readonly watermarkSecret: string;
+}
+
 /**
- * Panda Video — not implemented yet, on purpose.
+ * Panda Video, in production.
  *
- * The vendor decision is made and recorded (CLAUDE.md → "Decisions taken
- * ahead of Phase 2"). What is not yet in hand is Panda's signing scheme: the
- * exact parameter names, the hash input and its ordering, and which of the
- * library, tenant or viewer identifiers belong in it.
+ * **Panda does not sign an expiring URL the way Bunny does.** There is no
+ * timestamped, HMAC-signed link. Protection comes from three things that
+ * work together, and the URL this returns leans on all three:
  *
- * That gap is left open rather than guessed. A signing implementation written
- * from memory looks finished, typechecks, passes every test that does not talk
- * to Panda, and then returns 403 from the player in production — after the
- * content is uploaded and a client is waiting. An unmistakable failure at boot
- * is cheaper than a plausible one at runtime, and matches how this service
- * already treats configuration it cannot trust.
+ *   1. **Domain lock** — the player only runs when embedded on a domain on
+ *      Panda's allow-list. This is what actually stops a pasted URL from
+ *      playing elsewhere, and it lives in the Panda dashboard, not here.
+ *   2. **A per-viewer watermark** — a short-lived JWT, signed with the
+ *      watermark group's own secret, that burns the viewer's identity into
+ *      the picture. This is what makes a screen-recorded leak traceable, and
+ *      it is the reason Panda was chosen over Bunny at all.
+ *   3. **The unlock and assignment checks upstream**, which already ran before
+ *      this method was called.
  *
- * To finish this file you need, from the Panda dashboard and API docs:
- *
- *   1. The API key and the library (vz) identifier          → env
- *   2. The signed-playback scheme — parameter names, the string that gets
- *      hashed, the algorithm, and where the signature is carried
- *   3. The viewer-watermark fields, so `Viewer` is actually burned into
- *      playback rather than merely passed in and dropped
- *   4. The endpoint that reports a video's real duration
- *
- * Everything upstream of this file is finished and exercised against
- * `FakeVideoProvider`: the assignment check, the unlock rule, the expiry, the
- * audit row. Only the last hop is missing.
+ * So `expiresInSeconds` here bounds the **watermark token**, not the URL. A
+ * copied link keeps playing until the token expires *and* only on an allowed
+ * domain — the honest description of what the protection is, which the
+ * `SignedPlayback.expiresAt` contract still holds to.
  */
 export class PandaVideoProvider implements VideoProvider {
   readonly name = 'panda';
 
-  constructor(
-    private readonly apiKey: string,
-    private readonly libraryId: string,
-  ) {}
+  private readonly secret: Uint8Array;
 
-  signPlaybackUrl(
-    _videoId: string,
-    _options: { expiresInSeconds: number; viewer: Viewer },
+  constructor(private readonly config: PandaConfig) {
+    this.secret = new TextEncoder().encode(config.watermarkSecret);
+  }
+
+  async signPlaybackUrl(
+    videoId: string,
+    options: { expiresInSeconds: number; viewer: Viewer },
   ): Promise<SignedPlayback> {
-    return Promise.reject(
-      new Error(
-        'PandaVideoProvider.signPlaybackUrl is not implemented. ' +
-          'See the checklist in panda-video-provider.ts — the signing scheme has ' +
-          'to come from the Panda API documentation, not from a guess.',
-      ),
+    const expiresAt = new Date(Date.now() + options.expiresInSeconds * 1000);
+
+    /*
+     * The watermark JWT. HS256 signed with the group secret, the scheme Panda
+     * documents. The three free-text fields are what the viewer sees stamped
+     * on the video, so they carry the identity that makes a leak traceable —
+     * the email above all, because it points at exactly one account.
+     */
+    const watermark = await new SignJWT({
+      drm_group_id: this.config.watermarkGroupId,
+      string1: 'Licenciado para uso exclusivo',
+      string2: options.viewer.email,
+      string3: `Acesso: ${new Date().toISOString().slice(0, 10)}`,
+    })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setExpirationTime(expiresAt)
+      .sign(this.secret);
+
+    // The library id is the player subdomain; the video id and the watermark
+    // token are query parameters. This is Panda's embed URL shape, and it is
+    // the one contract LessonPlayer on the web side has to match.
+    const url =
+      `https://player-${this.config.libraryId}.tv.pandavideo.com.br/embed/` +
+      `?v=${encodeURIComponent(videoId)}&watermark=${encodeURIComponent(watermark)}`;
+
+    logger.debug(
+      { videoId, viewerId: options.viewer.userId, expiresAt },
+      'Panda playback URL minted',
     );
+
+    return { url, expiresAt };
   }
 
-  fetchDurationSeconds(_videoId: string): Promise<number | null> {
-    return Promise.reject(
-      new Error(
-        'PandaVideoProvider.fetchDurationSeconds is not implemented. ' +
-          'See the checklist in panda-video-provider.ts.',
-      ),
-    );
+  /**
+   * The real duration, from `GET /videos/{id}`.
+   *
+   * Returns null on anything other than a clean answer with a positive length:
+   * a video still encoding, a transient API error, a missing field. Every one
+   * of those means "not known yet", and the progress rule treats an unknown
+   * duration as a lesson that can be watched but never auto-completes — which
+   * is safe. Guessing a number here would let a wrong one decide who finished.
+   */
+  async fetchDurationSeconds(videoId: string): Promise<number | null> {
+    let response: Response;
+    try {
+      response = await fetch(
+        `https://api-v2.pandavideo.com.br/videos/${encodeURIComponent(videoId)}`,
+        { headers: { Authorization: this.config.apiKey } },
+      );
+    } catch (error) {
+      logger.warn({ videoId, error }, 'Could not reach Panda to read a duration');
+      return null;
+    }
+
+    if (!response.ok) {
+      logger.warn(
+        { videoId, status: response.status },
+        'Panda did not return a video; leaving the duration unknown',
+      );
+      return null;
+    }
+
+    const body: unknown = await response.json().catch(() => null);
+    const seconds = readDuration(body);
+
+    return seconds !== null && seconds > 0 ? Math.round(seconds) : null;
   }
+}
+
+/**
+ * Pull a duration out of Panda's response without trusting its exact shape.
+ *
+ * The field has been reported under a few names across the API's history, and
+ * an encoding video may carry none of them. Reading defensively here costs a
+ * few lines and means a schema tweak on their end degrades to "unknown"
+ * rather than crashing a heartbeat.
+ */
+function readDuration(body: unknown): number | null {
+  if (typeof body !== 'object' || body === null) return null;
+  const record = body as Record<string, unknown>;
+  for (const key of ['length', 'duration', 'video_duration', 'durationSeconds']) {
+    const value = record[key];
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+  }
+  return null;
 }

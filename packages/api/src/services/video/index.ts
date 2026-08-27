@@ -18,12 +18,31 @@ export function videoProvider(): VideoProvider {
       case 'fake':
         return new FakeVideoProvider();
       case 'panda': {
-        if (!env.PANDA_API_KEY || !env.PANDA_LIBRARY_ID) {
-          throw new Error(
-            'VIDEO_PROVIDER=panda requires PANDA_API_KEY and PANDA_LIBRARY_ID to be set.',
-          );
+        // All four, not two: the watermark is the whole reason for choosing
+        // Panda, and it needs its group id and secret. Refusing here, at
+        // first use, beats discovering a missing secret when a client presses
+        // play and the token signs against `undefined`.
+        const missing = (
+          [
+            ['PANDA_API_KEY', env.PANDA_API_KEY],
+            ['PANDA_LIBRARY_ID', env.PANDA_LIBRARY_ID],
+            ['PANDA_WATERMARK_GROUP_ID', env.PANDA_WATERMARK_GROUP_ID],
+            ['PANDA_WATERMARK_SECRET', env.PANDA_WATERMARK_SECRET],
+          ] as const
+        )
+          .filter(([, value]) => !value)
+          .map(([name]) => name);
+
+        if (missing.length > 0) {
+          throw new Error(`VIDEO_PROVIDER=panda requires: ${missing.join(', ')}.`);
         }
-        return new PandaVideoProvider(env.PANDA_API_KEY, env.PANDA_LIBRARY_ID);
+
+        return new PandaVideoProvider({
+          apiKey: env.PANDA_API_KEY!,
+          libraryId: env.PANDA_LIBRARY_ID!,
+          watermarkGroupId: env.PANDA_WATERMARK_GROUP_ID!,
+          watermarkSecret: env.PANDA_WATERMARK_SECRET!,
+        });
       }
     }
   })();

@@ -157,13 +157,15 @@ describe('LessonPage', () => {
     );
   });
 
-  it('plays the signed URL it was given, and never a video id', async () => {
+  it('plays the signed URL it was given, in the provider iframe', async () => {
     const { container } = renderLesson();
 
     await screen.findByRole('heading', { name: 'Bem-vindo' });
 
-    const video = container.querySelector('video');
-    expect(video).toHaveAttribute('src', 'https://video.invalid/signed');
+    // An iframe, not a <video>: Panda burns the watermark inside its own
+    // player, so the URL is loaded in their frame rather than as a media file.
+    const frame = container.querySelector('iframe');
+    expect(frame).toHaveAttribute('src', 'https://video.invalid/signed');
   });
 
   it('explains a locked lesson instead of showing a broken player', async () => {
