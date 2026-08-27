@@ -26,3 +26,6 @@ npm-debug.log*
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# Skill runtime cache (the skills themselves ARE versioned)
+.skills-cache/
