@@ -106,6 +106,21 @@ export async function deleteModule(client: DbClient, id: string): Promise<void> 
 
 // ── Lessons ───────────────────────────────────────────────────────────────
 
+/**
+ * Every external video id already attached to a lesson.
+ *
+ * Lesson is global content, not tenant-scoped, so this runs directly and
+ * answers "which of the library is spoken for" for the authoring picker.
+ */
+export async function listUsedExternalVideoIds(client: DbClient): Promise<string[]> {
+  const rows = await client.lesson.findMany({
+    where: { externalVideoId: { not: null } },
+    select: { externalVideoId: true },
+    distinct: ['externalVideoId'],
+  });
+  return rows.map((row) => row.externalVideoId).filter((id): id is string => id !== null);
+}
+
 export function findLessonById(client: DbClient, id: string): Promise<Prisma.LessonModel | null> {
   return client.lesson.findUnique({ where: { id } });
 }

@@ -31,6 +31,8 @@ export function VideoPicker({
   selectedId: string | null;
   onSelect: (video: LibraryVideo) => void;
 }) {
+  // The list is small enough that no memo of the used set is needed; `inUse`
+  // comes straight from the API.
   const [search, setSearch] = useState('');
   const videos = useQuery({ queryKey: ['videos'], queryFn: contentApi.listVideos });
 
@@ -133,7 +135,14 @@ function VideoRow({
       </span>
 
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-medium">{video.title}</span>
+        <span className="flex items-center gap-2">
+          <span className="truncate text-sm font-medium">{video.title}</span>
+          {video.inUse ? (
+            <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[0.6875rem] font-medium text-muted-foreground">
+              Em uso
+            </span>
+          ) : null}
+        </span>
         <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
           {video.ready ? (
             <>

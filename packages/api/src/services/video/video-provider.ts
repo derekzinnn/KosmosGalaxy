@@ -29,6 +29,14 @@ export interface VideoSummary {
   /** Only a ready video can be attached; the picker hides the rest. */
   readonly ready: boolean;
   readonly thumbnailUrl: string | null;
+  /**
+   * Whether some lesson already points at this video. Filled in by the
+   * service from our own database, not by the provider — the provider has no
+   * idea what we do with the videos it hosts. Lets an author see, in the
+   * picker, which of the library they have already used and avoid reaching
+   * for the same one twice by accident.
+   */
+  readonly inUse?: boolean;
 }
 
 export interface SignedPlayback {

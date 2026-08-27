@@ -4,6 +4,7 @@ import {
   ChevronDown,
   ChevronUp,
   Film,
+  Layers,
   Plus,
   Trash2,
   TriangleAlert,
@@ -11,21 +12,38 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { FormField } from '@/components/FormField';
+import { AddItemPopover } from '@/components/admin/AddItemPopover';
+import { LessonVideoModal } from '@/components/admin/LessonVideoModal';
 import { ErrorState } from '@/components/states/ErrorState';
 import { FullPageLoader } from '@/components/states/FullPageLoader';
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { messageFor } from '@/lib/api-error';
-import { contentApi, tenantApi, type Lesson, type Module } from '@/lib/content-api';
+import {
+  contentApi,
+  tenantApi,
+  type Lesson,
+  type LibraryVideo,
+  type Module,
+} from '@/lib/content-api';
 
 export function TrackEditorPage() {
   const { trackId = '' } = useParams<{ trackId: string }>();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [banner, setBanner] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const track = useQuery({
     queryKey: ['track', trackId],
@@ -128,12 +146,7 @@ export function TrackEditorPage() {
             {!current.published ? (
               <Button
                 variant="ghost"
-                onClick={() => {
-                  if (window.confirm('Excluir esta trilha? Esta ação não pode ser desfeita.')) {
-                    removeTrack.mutate();
-                  }
-                }}
-                loading={removeTrack.isPending}
+                onClick={() => setConfirmDelete(true)}
                 aria-label="Excluir trilha"
               >
                 <Trash2 aria-hidden />
@@ -159,38 +172,62 @@ export function TrackEditorPage() {
         ) : null}
       </header>
 
-      <section className="space-y-4">
-        <h2 className="text-base font-semibold tracking-tight">Conteúdo</h2>
+      <Tabs defaultValue="content" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="content">
+            <Layers className="size-4" aria-hidden />
+            Conteúdo
+          </TabsTrigger>
+          <TabsTrigger value="clients">
+            <Users className="size-4" aria-hidden />
+            Clientes
+          </TabsTrigger>
+        </TabsList>
 
-        {modules.length === 0 ? (
-          <Card className="p-6 text-sm text-muted-foreground">
-            Nenhum módulo ainda. Adicione o primeiro abaixo.
-          </Card>
-        ) : (
-          <ol className="space-y-4">
-            {modules.map((module, index) => (
-              <ModuleCard
-                key={module.id}
-                module={module}
-                index={index}
-                total={modules.length}
-                trackId={trackId}
-                onChanged={refresh}
-                onError={fail}
-              />
-            ))}
-          </ol>
-        )}
+        <TabsContent value="content" className="space-y-4">
+          {modules.length === 0 ? (
+            <Card className="p-6 text-sm text-muted-foreground">
+              Nenhum módulo ainda. Adicione o primeiro abaixo.
+            </Card>
+          ) : (
+            <ol className="space-y-4">
+              {modules.map((module, index) => (
+                <ModuleCard
+                  key={module.id}
+                  module={module}
+                  index={index}
+                  total={modules.length}
+                  trackId={trackId}
+                  onChanged={refresh}
+                  onError={fail}
+                />
+              ))}
+            </ol>
+          )}
 
-        <InlineAdd
-          label="Adicionar módulo"
-          placeholder="Nome do módulo"
-          pending={addModule.isPending}
-          onSubmit={(value) => addModule.mutate(value)}
-        />
-      </section>
+          <AddItemPopover
+            label="Adicionar módulo"
+            placeholder="Nome do módulo"
+            pending={addModule.isPending}
+            onSubmit={(value) => addModule.mutate(value)}
+          />
+        </TabsContent>
 
-      <AssignmentsSection trackId={trackId} onError={fail} />
+        <TabsContent value="clients">
+          <AssignmentsSection trackId={trackId} onError={fail} />
+        </TabsContent>
+      </Tabs>
+
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title="Excluir esta trilha?"
+        description="Esta ação não pode ser desfeita. Módulos e aulas vão junto."
+        confirmLabel="Excluir trilha"
+        destructive
+        loading={removeTrack.isPending}
+        onConfirm={() => removeTrack.mutate()}
+      />
     </div>
   );
 }
@@ -208,6 +245,7 @@ interface ModuleCardProps {
 
 function ModuleCard({ module, index, total, trackId, onChanged, onError }: ModuleCardProps) {
   const queryClient = useQueryClient();
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const move = useMutation({
     mutationFn: async (direction: -1 | 1) => {
@@ -281,12 +319,7 @@ function ModuleCard({ module, index, total, trackId, onChanged, onError }: Modul
               variant="ghost"
               size="icon"
               className="size-8 text-muted-foreground hover:text-destructive"
-              loading={remove.isPending}
-              onClick={() => {
-                if (window.confirm(`Excluir o módulo "${module.title}" e suas aulas?`)) {
-                  remove.mutate();
-                }
-              }}
+              onClick={() => setConfirmDelete(true)}
               aria-label={`Excluir ${module.title}`}
             >
               <Trash2 aria-hidden />
@@ -314,15 +347,27 @@ function ModuleCard({ module, index, total, trackId, onChanged, onError }: Modul
             </ol>
           )}
 
-          <InlineAdd
+          <AddItemPopover
             label="Adicionar aula"
             placeholder="Nome da aula"
             small
+            fullWidth
             pending={addLesson.isPending}
             onSubmit={(value) => addLesson.mutate(value)}
           />
         </div>
       </Card>
+
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title={`Excluir o módulo "${module.title}"?`}
+        description="As aulas dentro dele vão junto. Esta ação não pode ser desfeita."
+        confirmLabel="Excluir módulo"
+        destructive
+        loading={remove.isPending}
+        onConfirm={() => remove.mutate()}
+      />
     </li>
   );
 }
@@ -348,8 +393,8 @@ function LessonRow({
   onChanged,
   onError,
 }: LessonRowProps) {
-  const [editingVideo, setEditingVideo] = useState(false);
-  const [videoId, setVideoId] = useState(lesson.externalVideoId ?? '');
+  const [pickingVideo, setPickingVideo] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const move = useMutation({
     mutationFn: async (direction: -1 | 1) => {
@@ -367,12 +412,14 @@ function LessonRow({
   });
 
   const saveVideo = useMutation({
-    mutationFn: () =>
-      contentApi.updateLesson(lesson.id, { externalVideoId: videoId.trim() || null }),
-    onSuccess: async () => {
-      setEditingVideo(false);
-      await onChanged();
-    },
+    mutationFn: (video: LibraryVideo) =>
+      contentApi.updateLesson(lesson.id, {
+        externalVideoId: video.id,
+        // The picker carries the real length; save it so completion is
+        // computable without a second trip to Panda.
+        durationSeconds: video.durationSeconds,
+      }),
+    onSuccess: onChanged,
     onError,
   });
 
@@ -429,10 +476,7 @@ function LessonRow({
             variant="ghost"
             size="icon"
             className="size-8 text-muted-foreground hover:text-destructive"
-            loading={remove.isPending}
-            onClick={() => {
-              if (window.confirm(`Excluir a aula "${lesson.title}"?`)) remove.mutate();
-            }}
+            onClick={() => setConfirmDelete(true)}
             aria-label={`Excluir ${lesson.title}`}
           >
             <Trash2 aria-hidden />
@@ -440,40 +484,33 @@ function LessonRow({
         </div>
       </div>
 
-      {editingVideo ? (
-        <form
-          className="mt-3 flex flex-wrap items-end gap-2"
-          onSubmit={(event) => {
-            event.preventDefault();
-            saveVideo.mutate();
-          }}
-        >
-          <div className="min-w-48 flex-1">
-            <FormField
-              label="ID do vídeo no Panda"
-              value={videoId}
-              autoFocus
-              placeholder="ex.: 8f2c1a90-…"
-              onChange={(event) => setVideoId(event.target.value)}
-            />
-          </div>
-          <Button type="submit" size="sm" loading={saveVideo.isPending}>
-            Salvar
-          </Button>
-          <Button type="button" size="sm" variant="ghost" onClick={() => setEditingVideo(false)}>
-            Cancelar
-          </Button>
-        </form>
-      ) : (
-        <Button
-          variant="link"
-          size="sm"
-          className="mt-1 h-auto p-0 text-xs"
-          onClick={() => setEditingVideo(true)}
-        >
-          {lesson.hasVideo ? 'Trocar vídeo' : 'Adicionar vídeo'}
-        </Button>
-      )}
+      <Button
+        variant="link"
+        size="sm"
+        className="mt-1 h-auto p-0 text-xs"
+        loading={saveVideo.isPending}
+        onClick={() => setPickingVideo(true)}
+      >
+        {lesson.hasVideo ? 'Trocar vídeo' : 'Escolher vídeo'}
+      </Button>
+
+      <LessonVideoModal
+        open={pickingVideo}
+        onOpenChange={setPickingVideo}
+        currentVideoId={lesson.externalVideoId ?? null}
+        onPick={(video) => saveVideo.mutate(video)}
+      />
+
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title={`Excluir a aula "${lesson.title}"?`}
+        description="Esta ação não pode ser desfeita."
+        confirmLabel="Excluir aula"
+        destructive
+        loading={remove.isPending}
+        onConfirm={() => remove.mutate()}
+      />
     </li>
   );
 }
@@ -518,29 +555,66 @@ function AssignmentsSection({
     onError,
   });
 
-  const assignedIds = new Set((assigned.data?.tenants ?? []).map((tenant) => tenant.id));
+  const assignedTenants = assigned.data?.tenants ?? [];
+  const assignedIds = new Set(assignedTenants.map((tenant) => tenant.id));
   const available = (tenants.data?.tenants ?? []).filter((tenant) => !assignedIds.has(tenant.id));
 
   return (
     <section className="space-y-4">
       <div className="space-y-1.5">
-        <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight">
-          <Users className="size-4" aria-hidden />
-          Clientes com acesso
-        </h2>
+        <h2 className="text-base font-semibold tracking-tight">Clientes com acesso</h2>
         <p className="text-sm leading-relaxed text-muted-foreground">
           Um cliente só vê esta trilha depois que ela é publicada e liberada para a empresa dele.
         </p>
       </div>
 
+      <form
+        className="flex flex-wrap items-center gap-2"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (selected) assign.mutate(selected);
+        }}
+      >
+        <div className="min-w-56 flex-1">
+          <Select value={selected} onValueChange={setSelected} disabled={available.length === 0}>
+            <SelectTrigger aria-label="Escolher cliente">
+              <SelectValue
+                placeholder={
+                  available.length === 0
+                    ? 'Todos os clientes já têm acesso'
+                    : 'Escolher um cliente…'
+                }
+              />
+            </SelectTrigger>
+            <SelectContent>
+              {available.map((tenant) => (
+                <SelectItem key={tenant.id} value={tenant.id}>
+                  {tenant.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <Button type="submit" disabled={!selected} loading={assign.isPending}>
+          <Plus aria-hidden />
+          Liberar acesso
+        </Button>
+      </form>
+
       <Card className="divide-y divide-border">
         {assigned.isPending ? (
           <p className="p-4 text-sm text-muted-foreground">Carregando…</p>
-        ) : (assigned.data?.tenants ?? []).length === 0 ? (
-          <p className="p-4 text-sm text-muted-foreground">Nenhum cliente liberado ainda.</p>
+        ) : assignedTenants.length === 0 ? (
+          <p className="p-6 text-center text-sm text-muted-foreground">
+            Nenhum cliente liberado ainda. Escolha uma empresa acima para dar acesso.
+          </p>
         ) : (
-          (assigned.data?.tenants ?? []).map((tenant) => (
+          assignedTenants.map((tenant) => (
             <div key={tenant.id} className="flex items-center gap-3 p-4">
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-semibold text-accent-foreground">
+                {tenant.name.slice(0, 1).toUpperCase()}
+              </span>
               <span className="flex-1 truncate text-sm font-medium">{tenant.name}</span>
               <Button
                 variant="ghost"
@@ -553,110 +627,7 @@ function AssignmentsSection({
             </div>
           ))
         )}
-
-        <form
-          className="flex flex-wrap items-center gap-2 p-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (selected) assign.mutate(selected);
-          }}
-        >
-          <select
-            className="h-10 min-w-48 flex-1 rounded-lg border border-input bg-card px-3 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/25"
-            value={selected}
-            onChange={(event) => setSelected(event.target.value)}
-            aria-label="Escolher cliente"
-          >
-            <option value="">Escolher um cliente…</option>
-            {available.map((tenant) => (
-              <option key={tenant.id} value={tenant.id}>
-                {tenant.name}
-              </option>
-            ))}
-          </select>
-
-          <Button type="submit" disabled={!selected} loading={assign.isPending}>
-            <Plus aria-hidden />
-            Liberar
-          </Button>
-        </form>
       </Card>
     </section>
-  );
-}
-
-// ── Shared ────────────────────────────────────────────────────────────────
-
-function InlineAdd({
-  label,
-  placeholder,
-  pending,
-  small,
-  onSubmit,
-}: {
-  label: string;
-  placeholder: string;
-  pending: boolean;
-  small?: boolean;
-  onSubmit: (value: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [value, setValue] = useState('');
-
-  if (!open) {
-    return (
-      <Button
-        variant="outline"
-        size={small ? 'sm' : 'default'}
-        onClick={() => setOpen(true)}
-        className={small ? 'w-full' : undefined}
-      >
-        <Plus aria-hidden />
-        {label}
-      </Button>
-    );
-  }
-
-  return (
-    <form
-      className="flex flex-wrap items-end gap-2"
-      noValidate
-      onSubmit={(event) => {
-        event.preventDefault();
-        onSubmit(value.trim());
-        setValue('');
-        setOpen(false);
-      }}
-    >
-      <div className="min-w-48 flex-1">
-        <FormField
-          label={label}
-          placeholder={placeholder}
-          autoFocus
-          required
-          value={value}
-          onChange={(event) => setValue(event.target.value)}
-        />
-      </div>
-      <Button
-        type="submit"
-        size={small ? 'sm' : 'default'}
-        loading={pending}
-        disabled={value.trim().length < 2}
-      >
-        Adicionar
-      </Button>
-      <Button
-        type="button"
-        size={small ? 'sm' : 'default'}
-        variant="ghost"
-        onClick={() => {
-          setOpen(false);
-          setValue('');
-        }}
-      >
-        Cancelar
-      </Button>
-    </form>
   );
 }

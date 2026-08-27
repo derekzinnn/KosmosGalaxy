@@ -66,6 +66,8 @@ export interface LibraryVideo {
   durationSeconds: number | null;
   ready: boolean;
   thumbnailUrl: string | null;
+  /** Whether some lesson already points at this video. */
+  inUse?: boolean;
 }
 
 export const contentApi = {

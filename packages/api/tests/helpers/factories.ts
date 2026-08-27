@@ -161,3 +161,10 @@ export function assignTrackToTenant(trackId: string, tenantId: string) {
     db.raw.trackAssignment.create({ data: { trackId, tenantId } }),
   );
 }
+
+/** Attach a video id to a lesson, bypassing the API, for a fixture. */
+export function updateLessonVideo(lessonId: string, externalVideoId: string) {
+  return runInGlobalScope('system:test-fixture', (db) =>
+    db.raw.lesson.update({ where: { id: lessonId }, data: { externalVideoId } }),
+  );
+}
