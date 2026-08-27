@@ -129,7 +129,7 @@ override the codebase can perform.
 - **Writes must set the scalar foreign key.** A nested `connect` is invisible to
   the guard; the error message says so when it fires.
 
-### Two things Prisma 7 does that will bite you
+### Four things Prisma 7 does that will bite you
 
 - **Prisma promises are lazy.** `db.user.findFirst()` builds a promise and runs
   nothing until it is awaited. A scope callback that _returns_ a query instead
@@ -138,6 +138,18 @@ override the codebase can perform.
   `withGlobalScope` await inside the store for exactly this reason.
 - **A driver adapter is mandatory.** `new PrismaClient()` with no options throws.
   Prisma compiles the query; `pg` delivers it.
+- **`?schema=` in the URL does nothing.** It was a parameter Prisma's own
+  engine understood. The adapter hands the URL to `pg`, which does not know
+  that parameter and quietly ignores it — so every query lands in `public`
+  while the rest of the process believes otherwise. The schema is passed to
+  `PrismaPg` as an explicit option in `db/prisma.ts`. This failed silently for
+  a whole test run, which wrote its fixtures into the development schema.
+- **`timestamp` columns are read through the driver's timezone.** A
+  `timestamp without time zone` is an instant with the offset discarded, and
+  `pg` guesses it back using the timezone of the Node process — so on any
+  server not running in UTC, every read is shifted by the local offset. Every
+  `DateTime` in the schema therefore carries `@db.Timestamptz(3)`. **Add it to
+  any new one**; the failure is silent, and mixes cleanly with correct data.
 
 ---
 
@@ -461,11 +473,23 @@ credentials in Phase 2.
 
 ```bash
 npm test                                    # both packages
-npm test --workspace @kosmos/api            # integration tests, needs Postgres
+npm test --workspace @kosmos/api            # unit, then integration
+npm run test:unit --workspace @kosmos/api   # pure rules, no database
 npm test --workspace @kosmos/web            # component and unit tests
 ```
 
-**132 API tests** run against a real PostgreSQL database — migrations included,
+**`DATABASE_URL_TEST` may share a database with development, but never a
+schema.** Supabase gives a project one database, so the test suite lives in its
+own schema — `?schema=kosmos_test` — and `prisma migrate deploy` builds it
+there like any other. `tests/helpers/database.ts` refuses to run when the test
+target resolves to the same host, database _and_ schema as `DATABASE_URL`: this
+suite truncates every table before every test, and pointed at the wrong URL it
+does not fail, it succeeds quietly and the work is gone.
+
+A dedicated throwaway database is equally valid. What is refused is the two
+being the same place.
+
+**158 API tests** run against a real PostgreSQL database — migrations included,
 so the triggers and CHECK constraints under test are the real ones. Tests run
 single-worker because they truncate between cases.
 

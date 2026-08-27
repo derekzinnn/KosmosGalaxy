@@ -260,7 +260,13 @@ describe('invitations', () => {
 
     it('refuses an expired invitation', async () => {
       const token = lastInviteToken();
-      await rawQuery(`UPDATE invitations SET expires_at = now() - interval '1 second'`);
+      // An hour, not a second. `now()` is the database's clock and the expiry
+      // is checked against the application's, and those are two machines whose
+      // clocks agree only approximately — a managed Postgres a few hundred
+      // milliseconds ahead is enough to make "one second ago" still be in the
+      // future. The margin has to exceed ordinary clock skew, and nothing in
+      // what this test asserts depends on the expiry being recent.
+      await rawQuery(`UPDATE invitations SET expires_at = now() - interval '1 hour'`);
 
       await api()
         .post(`/invitations/${token}/accept`)
