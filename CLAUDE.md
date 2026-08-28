@@ -292,6 +292,18 @@ the lesson exists, which is what somebody enumerating ids is trying to learn.
 | Method | Path           | Access     |
 | ------ | -------------- | ---------- |
 | `GET`  | `/audit-logs`  | SUPERADMIN |
+| `GET`  | `/funnel`      | SUPERADMIN |
+
+`/funnel` is the onboarding overview: every client's furthest stage (invited →
+joined → started → completed) plus the cumulative counts. Like the audit read
+it is SUPERADMIN-only and a global read by nature, and like the admin client
+list it is **deliberately unaudited** — a dashboard staff load routinely, not a
+drill-into-one-client act. The numbers are assembled in memory from a handful
+of column-thin queries rather than one join, which at onboarding scale is both
+cheaper to run and the place where every stage rule lives in one readable spot.
+A zero denominator (a client with no assigned track) never reads as
+"completed"; it stays at whatever stage its people reached.
+
 
 The read side of the audit ledger. **This one _is_ behind a role gate**, and
 that is the right question here: the log spans every client and records many

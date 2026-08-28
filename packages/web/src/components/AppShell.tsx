@@ -70,6 +70,7 @@ export function AppShell() {
             {user?.role === 'SUPERADMIN' ? (
               <nav aria-label="Áreas da Kosmos" className="hidden gap-1 sm:flex">
                 <StaffLink to="/">Início</StaffLink>
+                <StaffLink to="/admin/funnel">Funil</StaffLink>
                 <StaffLink to="/admin/clients">Clientes</StaffLink>
                 <StaffLink to="/admin/tracks">Trilhas</StaffLink>
                 <StaffLink to="/admin/audit">Auditoria</StaffLink>

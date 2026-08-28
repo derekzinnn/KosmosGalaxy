@@ -8,6 +8,7 @@ import { ThemeProvider } from '@/theme/ThemeProvider';
 import { AcceptInvitePage } from '@/pages/AcceptInvitePage';
 import { AuditLogPage } from '@/pages/admin/AuditLogPage';
 import { ClientsPage } from '@/pages/admin/ClientsPage';
+import { FunnelPage } from '@/pages/admin/FunnelPage';
 import { LessonPreviewPage } from '@/pages/admin/LessonPreviewPage';
 import { TrackEditorPage } from '@/pages/admin/TrackEditorPage';
 import { TracksPage } from '@/pages/admin/TracksPage';
@@ -64,6 +65,7 @@ export function App() {
                         path="/admin/tracks/:trackId/preview"
                         element={<LessonPreviewPage />}
                       />
+                      <Route path="/admin/funnel" element={<FunnelPage />} />
                       <Route path="/admin/audit" element={<AuditLogPage />} />
                     </Route>
                   </Route>
