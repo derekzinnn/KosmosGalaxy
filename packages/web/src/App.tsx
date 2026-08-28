@@ -6,6 +6,7 @@ import { AppShell } from '@/components/AppShell';
 import { RootErrorBoundary } from '@/components/RootErrorBoundary';
 import { ThemeProvider } from '@/theme/ThemeProvider';
 import { AcceptInvitePage } from '@/pages/AcceptInvitePage';
+import { AuditLogPage } from '@/pages/admin/AuditLogPage';
 import { ClientsPage } from '@/pages/admin/ClientsPage';
 import { LessonPreviewPage } from '@/pages/admin/LessonPreviewPage';
 import { TrackEditorPage } from '@/pages/admin/TrackEditorPage';
@@ -63,6 +64,7 @@ export function App() {
                         path="/admin/tracks/:trackId/preview"
                         element={<LessonPreviewPage />}
                       />
+                      <Route path="/admin/audit" element={<AuditLogPage />} />
                     </Route>
                   </Route>
                 </Route>

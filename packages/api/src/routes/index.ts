@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { auditRouter } from './audit.routes.js';
 import { authRouter } from './auth.routes.js';
 import { contentRouter, lessonRouter, moduleRouter, resourceRouter } from './content.routes.js';
 import { invitationRouter } from './invitation.routes.js';
@@ -19,3 +20,4 @@ apiRouter.use('/modules', moduleRouter);
 apiRouter.use('/lessons', lessonRouter);
 apiRouter.use('/resources', resourceRouter);
 apiRouter.use('/videos', videoRouter);
+apiRouter.use('/audit-logs', auditRouter);

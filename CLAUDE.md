@@ -15,8 +15,8 @@ in, who watched what, who is stuck and who has not started.
 | **Phase 0** | Monorepo, database schema, auth, invitations, RBAC, audit log                | ✅ **Done** |
 | **Phase 1** | Course content CRUD, ordering, publishing, track assignment                  | ✅ **Done** |
 | Phase 2     | Panda Video, signed playback, player, heartbeat telemetry, sequential unlock | ✅ **Done** |
-| Phase 3     | Client-facing classroom UI and progress experience                           | Not started |
-| Phase 4     | Admin console: onboarding funnel, per-client drill-down, audit viewer        | Not started |
+| Phase 3     | Client-facing classroom UI and progress experience                           | ✅ **Done** |
+| Phase 4     | Admin console: onboarding funnel, per-client drill-down, audit viewer        | In progress |
 
 ---
 
@@ -286,6 +286,30 @@ than a role check can make.
 
 A lesson the caller was never assigned answers **404, not 403**. A 403 confirms
 the lesson exists, which is what somebody enumerating ids is trying to learn.
+
+### Added in Phase 4
+
+| Method | Path           | Access     |
+| ------ | -------------- | ---------- |
+| `GET`  | `/audit-logs`  | SUPERADMIN |
+
+The read side of the audit ledger. **This one _is_ behind a role gate**, and
+that is the right question here: the log spans every client and records many
+rows with no tenant at all (a failed login before any tenant is known, a
+superadmin override), so it is a global read no client account may make — even
+for their own company. Unlike the playback endpoints, there is no per-row
+assignment to resolve; "are you Kosmos staff?" is exactly the test. The route
+enforces it and `audit-query.service.ts` re-checks, because the service is
+where the boundary lives.
+
+`AuditLog` is deliberately absent from the tenant guard's model map (it carries
+no checked tenant column), so the read runs in a named global scope and
+pagination is **keyset, not offset**: ids are UUIDv7, so ordering by `id`
+descending is newest-first and the cursor is the last id seen — a page cannot
+skip or repeat a row when new entries land between requests. Tenant names are
+resolved once per page from the ids the page happens to contain, since the
+ledger holds no foreign key to join on. Filters: `action`, `tenantId`,
+`actorUserId`, `entityType`, `entityId`, `from`, `to`, `cursor`, `limit`.
 
 Errors are `{ error: { code, message, details? } }`. **`code` is the contract**
 and is English; Portuguese copy lives in `packages/web/src/lib/api-error.ts`,

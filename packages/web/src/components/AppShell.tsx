@@ -72,6 +72,7 @@ export function AppShell() {
                 <StaffLink to="/">Início</StaffLink>
                 <StaffLink to="/admin/clients">Clientes</StaffLink>
                 <StaffLink to="/admin/tracks">Trilhas</StaffLink>
+                <StaffLink to="/admin/audit">Auditoria</StaffLink>
               </nav>
             ) : null}
           </div>
