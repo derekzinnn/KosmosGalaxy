@@ -1,10 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
-import { BookOpen, ChevronRight, Plus } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { BookOpen, Plus } from 'lucide-react';
 import { NewTrackModal } from '@/components/admin/NewTrackModal';
+import { StaffTrackCard } from '@/components/admin/StaffTrackCard';
 import { EmptyState } from '@/components/states/EmptyState';
 import { ErrorState } from '@/components/states/ErrorState';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ModalTrigger } from '@/components/ui/modal';
@@ -70,38 +69,16 @@ export function TracksPage() {
           />
         </Card>
       ) : (
-        <ul className="space-y-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {list.map((track) => (
-            <li key={track.id}>
-              <Link
-                to={`/admin/tracks/${track.id}`}
-                className="flex items-center gap-4 rounded-xl border border-border bg-card p-4 transition-colors hover:border-ring/40 hover:bg-muted/40 sm:p-5"
-              >
-                <div className="min-w-0 flex-1 space-y-1.5">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="truncate font-medium">{track.title}</span>
-                    {track.published ? (
-                      <Badge variant="success">Publicada</Badge>
-                    ) : (
-                      <Badge>Rascunho</Badge>
-                    )}
-                  </div>
-
-                  <p className="text-xs text-muted-foreground">
-                    {track.moduleCount ?? 0} {(track.moduleCount ?? 0) === 1 ? 'módulo' : 'módulos'}
-                    {' · '}
-                    {track.lessonCount ?? 0} {(track.lessonCount ?? 0) === 1 ? 'aula' : 'aulas'}
-                    {' · '}
-                    {track.assignedTenantCount ?? 0}{' '}
-                    {(track.assignedTenantCount ?? 0) === 1 ? 'cliente' : 'clientes'}
-                  </p>
-                </div>
-
-                <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-              </Link>
-            </li>
+            <StaffTrackCard
+              key={track.id}
+              track={track}
+              to={`/admin/tracks/${track.id}`}
+              cta="Editar"
+            />
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );

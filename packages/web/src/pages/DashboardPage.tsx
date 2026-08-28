@@ -1,11 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
-import { Compass, PlayCircle } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Compass } from 'lucide-react';
 import { useAuth } from '@/auth/useAuth';
+import { StaffTrackCard } from '@/components/admin/StaffTrackCard';
 import { ClientCourses } from '@/components/ClientCourses';
 import { EmptyState } from '@/components/states/EmptyState';
 import { ErrorState } from '@/components/states/ErrorState';
-import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { messageFor } from '@/lib/api-error';
 import { contentApi, type Track } from '@/lib/content-api';
@@ -70,36 +69,16 @@ function StaffTrackList({
   }
 
   return (
-    <ul className="space-y-3">
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {tracks.map((track) => (
-        <li key={track.id}>
-          <Link
-            to={`/admin/tracks/${track.id}/preview`}
-            className="flex items-center gap-4 rounded-xl border border-border bg-card p-4 transition-colors hover:border-ring/40 hover:bg-muted/40 sm:p-5"
-          >
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground">
-              <PlayCircle className="size-5" aria-hidden />
-            </span>
-            <div className="min-w-0 flex-1 space-y-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="truncate font-medium">{track.title}</span>
-                {track.published ? (
-                  <Badge variant="success">Publicada</Badge>
-                ) : (
-                  <Badge>Rascunho</Badge>
-                )}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {track.moduleCount ?? 0} {(track.moduleCount ?? 0) === 1 ? 'módulo' : 'módulos'}
-                {' · '}
-                {track.lessonCount ?? 0} {(track.lessonCount ?? 0) === 1 ? 'aula' : 'aulas'}
-                {' · pré-visualizar'}
-              </p>
-            </div>
-          </Link>
-        </li>
+        <StaffTrackCard
+          key={track.id}
+          track={track}
+          to={`/admin/tracks/${track.id}/preview`}
+          cta="Pré-visualizar"
+        />
       ))}
-    </ul>
+    </div>
   );
 }
 
