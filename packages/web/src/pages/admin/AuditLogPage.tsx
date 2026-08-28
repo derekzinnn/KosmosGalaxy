@@ -39,11 +39,13 @@ const dateTime = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyl
  * security-sensitive events carry a red marker so a reused token or a staff
  * override does not blend into routine traffic.
  */
-const PAGE_SIZE = 50;
+/** How many rows a page may hold. Ten by default — a log is read a little at a time. */
+const PAGE_SIZES = [10, 25, 50] as const;
 
 export function AuditLogPage() {
   const [action, setActionRaw] = useState<string>(ALL);
   const [tenantId, setTenantIdRaw] = useState<string>(ALL);
+  const [pageSize, setPageSizeRaw] = useState<number>(10);
   // The cursor used to reach each page; `[undefined]` is page 1. Pushing the
   // current page's nextCursor advances; popping goes back.
   const [cursors, setCursors] = useState<(string | undefined)[]>([undefined]);
@@ -54,26 +56,30 @@ export function AuditLogPage() {
   const tenants = useQuery({ queryKey: ['tenants'], queryFn: tenantApi.list });
 
   const log = useQuery({
-    queryKey: ['audit-logs', action, tenantId, currentCursor ?? ''],
+    queryKey: ['audit-logs', action, tenantId, pageSize, currentCursor ?? ''],
     queryFn: () =>
       auditApi.list({
         action: action === ALL ? undefined : action,
         tenantId: tenantId === ALL ? undefined : tenantId,
         cursor: currentCursor,
-        limit: PAGE_SIZE,
+        limit: pageSize,
       }),
     // Keep the current page on screen while the next one loads, so paging does
     // not flash the skeleton between clicks.
     placeholderData: keepPreviousData,
   });
 
-  // Changing a filter starts the listing over at page 1.
+  // Changing a filter or the page size starts the listing over at page 1.
   function setAction(next: string) {
     setActionRaw(next);
     setCursors([undefined]);
   }
   function setTenantId(next: string) {
     setTenantIdRaw(next);
+    setCursors([undefined]);
+  }
+  function setPageSize(next: number) {
+    setPageSizeRaw(next);
     setCursors([undefined]);
   }
 
@@ -117,6 +123,21 @@ export function AuditLogPage() {
               {(tenants.data?.tenants ?? []).map((tenant) => (
                 <SelectItem key={tenant.id} value={tenant.id}>
                   {tenant.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="w-full sm:w-40">
+          <Select value={String(pageSize)} onValueChange={(value) => setPageSize(Number(value))}>
+            <SelectTrigger aria-label="Itens por página">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PAGE_SIZES.map((size) => (
+                <SelectItem key={size} value={String(size)}>
+                  {size} por página
                 </SelectItem>
               ))}
             </SelectContent>

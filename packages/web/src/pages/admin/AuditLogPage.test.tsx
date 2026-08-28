@@ -67,6 +67,8 @@ describe('AuditLogPage', () => {
     // A single, complete page: page 1, and "Próxima" has nowhere to go.
     expect(screen.getByText('Página 1')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Próxima/ })).toBeDisabled();
+    // Ten per page by default.
+    expect(list).toHaveBeenCalledWith(expect.objectContaining({ limit: 10 }));
   });
 
   it('flags a security event and lets its details expand', async () => {
