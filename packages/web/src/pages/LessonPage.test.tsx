@@ -246,13 +246,15 @@ describe('LessonPage', () => {
     renderLesson('lesson-2');
     await screen.findByRole('heading', { name: 'Como funciona' });
 
-    // Mid-video: no button yet.
+    // The button is there from the start, but greyed out and unclickable until
+    // the video is near the end.
+    const button = screen.getByRole('button', { name: /Marcar como concluída/ });
     act(() => pandaTime(120));
-    expect(screen.queryByRole('button', { name: /Marcar como concluída/ })).not.toBeInTheDocument();
+    expect(button).toBeDisabled();
 
-    // Into the last tenth of a 600s lesson: the button appears.
+    // Into the last tenth of a 600s lesson: it becomes clickable.
     act(() => pandaTime(560));
-    const button = await screen.findByRole('button', { name: /Marcar como concluída/ });
+    expect(button).toBeEnabled();
 
     await user.click(button);
     // Completes the current lesson, reporting the position it had reached.

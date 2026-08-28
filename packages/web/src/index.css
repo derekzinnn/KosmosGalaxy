@@ -157,3 +157,76 @@
       radial-gradient(40rem 30rem at 110% 10%, oklch(0.95 0.03 300 / 0.5), transparent 65%);
   }
 }
+
+/*
+ * The moment a client finishes a lesson.
+ *
+ * A short burst — a ring of stars thrown outward and a check that pops in —
+ * echoing the orbit mark, spent once and gone. Held to the brand's indigo→
+ * violet arc, never a confetti rainbow. `motion-reduce` drops it entirely; the
+ * "Aula concluída" card carries the meaning without the movement.
+ */
+@keyframes kosmos-burst {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--tx, 0), var(--ty, 0)) scale(0.35);
+    opacity: 0;
+  }
+}
+@keyframes kosmos-ring {
+  0% {
+    transform: scale(0.4);
+    opacity: 0.55;
+  }
+  100% {
+    transform: scale(2.3);
+    opacity: 0;
+  }
+}
+@keyframes kosmos-pop {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  55% {
+    transform: scale(1.18);
+    opacity: 1;
+  }
+  75% {
+    transform: scale(0.94);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@layer components {
+  .kosmos-burst-particle {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    height: 0.5rem;
+    width: 0.5rem;
+    border-radius: 9999px;
+    animation: kosmos-burst 900ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+  .kosmos-burst-ring {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    height: 5rem;
+    width: 5rem;
+    margin-top: -2.5rem;
+    margin-left: -2.5rem;
+    border-radius: 9999px;
+    border: 2px solid var(--primary);
+    animation: kosmos-ring 900ms ease-out forwards;
+  }
+  .kosmos-burst-check {
+    animation: kosmos-pop 600ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+}

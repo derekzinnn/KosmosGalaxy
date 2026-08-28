@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, ChevronLeft, FileText, Link2, Lock, PlayCircle } from 'lucide-react';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { CompletionCelebration } from '@/components/CompletionCelebration';
 import { LessonPlayer } from '@/components/LessonPlayer';
 import { ErrorState } from '@/components/states/ErrorState';
 import { Badge } from '@/components/ui/badge';
@@ -54,6 +55,12 @@ export function LessonPage() {
   // than re-rendering on every timeupdate.
   const [nearEnd, setNearEnd] = useState(false);
   const [completedNextId, setCompletedNextId] = useState<string | null>(null);
+  // Fires the little burst, then clears itself so it can play again next lesson.
+  const [celebrate, setCelebrate] = useState(false);
+  const cheer = useCallback(() => {
+    setCelebrate(true);
+    setTimeout(() => setCelebrate(false), 1100);
+  }, []);
 
   const tracks = useQuery({ queryKey: ['my-tracks'], queryFn: contentApi.myTracks });
 
@@ -85,11 +92,12 @@ export function LessonPage() {
     (result: HeartbeatResult) => {
       if (result.justCompleted) {
         setJustCompleted(true);
+        cheer();
         // The unlock state moved, so the outline is now stale.
         void queryClient.invalidateQueries({ queryKey: ['lesson-progress'] });
       }
     },
-    [queryClient],
+    [queryClient, cheer],
   );
 
   const getPosition = useCallback(() => positionRef.current, []);
@@ -107,6 +115,7 @@ export function LessonPage() {
     onSuccess: (data) => {
       setJustCompleted(true);
       setCompletedNextId(data.progress.nextLessonId);
+      cheer();
       void queryClient.invalidateQueries({ queryKey: ['lesson-progress'] });
       void queryClient.invalidateQueries({ queryKey: ['my-tracks'] });
     },
@@ -156,9 +165,12 @@ export function LessonPage() {
   const { track, lesson } = found;
   const nextLessonId = progress.data.progress.nextLessonId;
   const thisLesson = stateByLesson.get(lessonId);
+  const done = justCompleted || (thisLesson?.completed ?? false);
 
   return (
     <div className="space-y-6">
+      <CompletionCelebration active={celebrate} />
+
       <div className="flex flex-wrap items-center gap-3">
         <Button variant="ghost" onClick={() => void navigate('/')}>
           <ChevronLeft className="size-4" aria-hidden />
@@ -209,22 +221,7 @@ export function LessonPage() {
             ) : null}
           </div>
 
-          {!justCompleted && !thisLesson?.completed && nearEnd ? (
-            <div className="space-y-2">
-              {complete.isError ? <Alert variant="info">{messageFor(complete.error)}</Alert> : null}
-              <Button
-                size="lg"
-                className="w-full sm:w-auto"
-                loading={complete.isPending}
-                onClick={() => complete.mutate()}
-              >
-                <CheckCircle2 className="size-4" aria-hidden />
-                Marcar como concluída
-              </Button>
-            </div>
-          ) : null}
-
-          {justCompleted ? (
+          {done ? (
             <Card className="border-accent p-5">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
@@ -244,7 +241,26 @@ export function LessonPage() {
                 ) : null}
               </div>
             </Card>
-          ) : null}
+          ) : (
+            <div className="space-y-2">
+              {complete.isError ? <Alert variant="info">{messageFor(complete.error)}</Alert> : null}
+              <Button
+                size="lg"
+                className="w-full sm:w-auto"
+                loading={complete.isPending}
+                disabled={!nearEnd}
+                onClick={() => complete.mutate()}
+              >
+                <CheckCircle2 className="size-4" aria-hidden />
+                Marcar como concluída
+              </Button>
+              {!nearEnd ? (
+                <p className="text-xs text-muted-foreground">
+                  Fica disponível quando você chega perto do fim do vídeo.
+                </p>
+              ) : null}
+            </div>
+          )}
 
           {lesson.resources.length > 0 ? (
             <Card className="p-5">
