@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { auditRouter } from './audit.routes.js';
 import { authRouter } from './auth.routes.js';
+import { clientRouter } from './client.routes.js';
 import { contentRouter, lessonRouter, moduleRouter, resourceRouter } from './content.routes.js';
 import { funnelRouter } from './funnel.routes.js';
 import { invitationRouter } from './invitation.routes.js';
@@ -23,3 +24,4 @@ apiRouter.use('/resources', resourceRouter);
 apiRouter.use('/videos', videoRouter);
 apiRouter.use('/audit-logs', auditRouter);
 apiRouter.use('/funnel', funnelRouter);
+apiRouter.use('/clients', clientRouter);

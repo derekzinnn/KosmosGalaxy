@@ -16,7 +16,7 @@ in, who watched what, who is stuck and who has not started.
 | **Phase 1** | Course content CRUD, ordering, publishing, track assignment                  | ✅ **Done** |
 | Phase 2     | Panda Video, signed playback, player, heartbeat telemetry, sequential unlock | ✅ **Done** |
 | Phase 3     | Client-facing classroom UI and progress experience                           | ✅ **Done** |
-| Phase 4     | Admin console: onboarding funnel, per-client drill-down, audit viewer        | In progress |
+| Phase 4     | Admin console: onboarding funnel, per-client drill-down, audit viewer        | ✅ **Done** |
 
 ---
 
@@ -295,6 +295,7 @@ the lesson exists, which is what somebody enumerating ids is trying to learn.
 | `GET`    | `/funnel`             | SUPERADMIN |
 | `POST`   | `/tracks/:id/cover`   | SUPERADMIN |
 | `DELETE` | `/tracks/:id/cover`   | SUPERADMIN |
+| `GET`    | `/clients/:tenantId`  | SUPERADMIN |
 
 `/funnel` is the onboarding overview: every client's furthest stage (invited →
 joined → started → completed) plus the cumulative counts. Like the audit read
@@ -318,6 +319,17 @@ mapper, so the bucket can move without a data migration. The bytes are uploaded
 before the path is committed, and the previous object is deleted only after —
 best-effort, since a leftover object is cheaper than a lost update. A null path
 falls back to the generated orbit `TrackCover`, so a banner is always optional.
+
+`/clients/:tenantId` is the **per-client drill-down** — one company's onboarding
+lesson by lesson. Unlike the funnel, opening it is the audited act: the service
+wraps every read in `runAsSuperadminOnTenant`, which pins the queries to that
+one tenant and writes a `TENANT_SCOPE_OVERRIDDEN` line (reason `client-drilldown`,
+once per request) — glancing at everyone is free, reaching into one named
+company is logged. Content is read through `TrackAssignment` (the guarded side),
+never `track.findMany`. The response is `{ tenant, members, tracks, progress }`
+where `progress` is a **sparse** matrix — only the (member, lesson) cells that
+have any progress — and the client fills the "not started" blanks, so the
+payload does not balloon to members × lessons.
 
 
 The read side of the audit ledger. **This one _is_ behind a role gate**, and

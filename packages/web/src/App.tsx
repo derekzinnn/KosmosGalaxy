@@ -7,6 +7,7 @@ import { RootErrorBoundary } from '@/components/RootErrorBoundary';
 import { ThemeProvider } from '@/theme/ThemeProvider';
 import { AcceptInvitePage } from '@/pages/AcceptInvitePage';
 import { AuditLogPage } from '@/pages/admin/AuditLogPage';
+import { ClientDrilldownPage } from '@/pages/admin/ClientDrilldownPage';
 import { ClientsPage } from '@/pages/admin/ClientsPage';
 import { FunnelPage } from '@/pages/admin/FunnelPage';
 import { LessonPreviewPage } from '@/pages/admin/LessonPreviewPage';
@@ -59,6 +60,7 @@ export function App() {
                     {/* Authoring is Kosmos-only; the guard sends anyone else home. */}
                     <Route element={<RequireAuth allow={['SUPERADMIN']} />}>
                       <Route path="/admin/clients" element={<ClientsPage />} />
+                      <Route path="/admin/clients/:tenantId" element={<ClientDrilldownPage />} />
                       <Route path="/admin/tracks" element={<TracksPage />} />
                       <Route path="/admin/tracks/:trackId" element={<TrackEditorPage />} />
                       <Route

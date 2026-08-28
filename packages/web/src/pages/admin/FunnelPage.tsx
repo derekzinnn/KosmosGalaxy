@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Users } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { EmptyState } from '@/components/states/EmptyState';
 import { ErrorState } from '@/components/states/ErrorState';
 import { Card } from '@/components/ui/card';
@@ -120,52 +121,57 @@ function ClientRow({ client }: { client: FunnelClient }) {
   const meta = STAGE[client.stage];
 
   return (
-    <li className="rounded-xl border border-border bg-card p-4 sm:p-5">
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <div className="flex min-w-0 items-center gap-3">
-          <span
-            className="size-2.5 shrink-0 rounded-full"
-            style={{ background: meta.color }}
-            aria-hidden
-          />
-          <div className="min-w-0">
-            <p className="truncate font-medium">{client.tenantName}</p>
-            <p className="text-xs text-muted-foreground">
-              {client.membersJoined} de {client.membersTotal}{' '}
-              {client.membersTotal === 1 ? 'pessoa entrou' : 'pessoas entraram'}
-              {client.assignedTracks > 0
-                ? ` · ${String(client.assignedTracks)} ${client.assignedTracks === 1 ? 'trilha' : 'trilhas'}`
-                : ' · sem trilha atribuída'}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <div className="text-right">
-            <span className="text-sm font-medium" style={{ color: meta.color }}>
-              {meta.label}
-            </span>
-            <p className="text-xs text-muted-foreground">{relativeTime(client.lastActivityAt)}</p>
-          </div>
-        </div>
-      </div>
-
-      {client.lessonsTotal > 0 ? (
-        <div className="mt-3">
-          <div className="mb-1 flex justify-between text-xs text-muted-foreground">
-            <span>
-              {client.lessonsCompleted} de {client.lessonsTotal} aulas
-            </span>
-            <span className="tabular-nums">{client.percent}%</span>
-          </div>
-          <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-            <div
-              className="h-full rounded-full transition-all"
-              style={{ width: `${String(client.percent)}%`, background: meta.color }}
+    <li>
+      <Link
+        to={`/admin/clients/${client.tenantId}`}
+        className="block rounded-xl border border-border bg-card p-4 transition-colors hover:border-ring/40 hover:bg-muted/40 sm:p-5"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <div className="flex min-w-0 items-center gap-3">
+            <span
+              className="size-2.5 shrink-0 rounded-full"
+              style={{ background: meta.color }}
+              aria-hidden
             />
+            <div className="min-w-0">
+              <p className="truncate font-medium">{client.tenantName}</p>
+              <p className="text-xs text-muted-foreground">
+                {client.membersJoined} de {client.membersTotal}{' '}
+                {client.membersTotal === 1 ? 'pessoa entrou' : 'pessoas entraram'}
+                {client.assignedTracks > 0
+                  ? ` · ${String(client.assignedTracks)} ${client.assignedTracks === 1 ? 'trilha' : 'trilhas'}`
+                  : ' · sem trilha atribuída'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <div className="text-right">
+              <span className="text-sm font-medium" style={{ color: meta.color }}>
+                {meta.label}
+              </span>
+              <p className="text-xs text-muted-foreground">{relativeTime(client.lastActivityAt)}</p>
+            </div>
           </div>
         </div>
-      ) : null}
+
+        {client.lessonsTotal > 0 ? (
+          <div className="mt-3">
+            <div className="mb-1 flex justify-between text-xs text-muted-foreground">
+              <span>
+                {client.lessonsCompleted} de {client.lessonsTotal} aulas
+              </span>
+              <span className="tabular-nums">{client.percent}%</span>
+            </div>
+            <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full rounded-full transition-all"
+                style={{ width: `${String(client.percent)}%`, background: meta.color }}
+              />
+            </div>
+          </div>
+        ) : null}
+      </Link>
     </li>
   );
 }
