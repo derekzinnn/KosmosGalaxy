@@ -255,7 +255,8 @@ describe('LessonPage', () => {
     const button = await screen.findByRole('button', { name: /Marcar como concluída/ });
 
     await user.click(button);
-    expect(complete).toHaveBeenCalledWith('lesson-2');
+    // Completes the current lesson, reporting the position it had reached.
+    expect(complete).toHaveBeenCalledWith('lesson-2', 560);
     expect(await screen.findByText(/Aula concluída/)).toBeInTheDocument();
   });
 });

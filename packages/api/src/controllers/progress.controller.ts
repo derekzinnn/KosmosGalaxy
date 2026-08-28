@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import { requireContext } from '../middleware/authenticate.js';
-import type { HeartbeatBody } from '../schemas/progress.schemas.js';
+import type { CompleteBody, HeartbeatBody } from '../schemas/progress.schemas.js';
 import { issuePlayback } from '../services/playback.service.js';
 import {
   describeTrackProgress,
@@ -34,7 +34,12 @@ export async function heartbeatHandler(req: Request, res: Response): Promise<voi
 }
 
 export async function completeLessonHandler(req: Request, res: Response): Promise<void> {
-  const progress = await markLessonComplete(requireContext(req), param(req, 'lessonId'));
+  const body = req.body as CompleteBody;
+  const progress = await markLessonComplete(
+    requireContext(req),
+    param(req, 'lessonId'),
+    body.positionSeconds,
+  );
   res.json({ progress });
 }
 

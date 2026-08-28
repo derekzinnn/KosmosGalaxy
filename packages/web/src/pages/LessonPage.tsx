@@ -103,7 +103,7 @@ export function LessonPage() {
   });
 
   const complete = useMutation({
-    mutationFn: () => classroomApi.complete(lessonId),
+    mutationFn: () => classroomApi.complete(lessonId, Math.floor(positionRef.current)),
     onSuccess: (data) => {
       setJustCompleted(true);
       setCompletedNextId(data.progress.nextLessonId);

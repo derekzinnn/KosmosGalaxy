@@ -277,6 +277,7 @@ export interface CompleteResult {
 export function markLessonComplete(
   context: RequestContext,
   lessonId: string,
+  reportedPositionSeconds: number,
 ): Promise<CompleteResult> {
   const tenantId = requireClient(context);
 
@@ -294,15 +295,30 @@ export function markLessonComplete(
     const previous = progressRows.find((row) => row.lessonId === lessonId) ?? null;
     const alreadyDone = previous?.completedAt ?? null;
 
-    // The integrity gate. A lesson whose length is unknown can never be
-    // confirmed complete — guessing would let a wrong number decide.
+    // Where the client has reached — the furthest of what it reports now and
+    // what earlier heartbeats recorded, clamped to the video length.
+    const duration = lesson.durationSeconds;
+    const reached = Math.max(
+      previous?.maxPositionSeconds ?? 0,
+      Math.min(Math.max(reportedPositionSeconds, 0), duration ?? reportedPositionSeconds),
+    );
+
+    /**
+     * The gate for the explicit button is reaching the end, not watched time.
+     *
+     * This is a product choice, and a deliberate departure from the automatic
+     * completion the heartbeat still does by watched time: pressing "concluir"
+     * with the last tenth of the bar left is exactly what Kosmos wants a client
+     * to be able to do, even after skipping. Onboarding is not a paid course a
+     * viewer games — it is a contract client working through their own setup —
+     * so "reached the end" is the right, and the owner's chosen, bar. A lesson
+     * whose length is unknown still cannot be closed: there is no "end" to reach.
+     */
     if (alreadyDone === null) {
-      const duration = lesson.durationSeconds;
-      const watched = previous?.totalWatchedSeconds ?? 0;
-      if (duration === null || watched < duration * heartbeatSettings.completionRatio) {
+      if (duration === null || reached < duration * heartbeatSettings.completionRatio) {
         throw new BadRequestError(
-          'Watch more of the lesson before marking it complete',
-          'LESSON_NOT_WATCHED_ENOUGH',
+          'Reach the end of the video before marking the lesson complete',
+          'LESSON_NOT_NEAR_END',
         );
       }
     }
@@ -322,7 +338,7 @@ export function markLessonComplete(
         userId: context.userId,
         lessonId,
         tenantId,
-        maxPositionSeconds: previous?.maxPositionSeconds ?? 0,
+        maxPositionSeconds: Math.round(reached),
         totalWatchedSeconds: previous?.totalWatchedSeconds ?? 0,
         completedAt,
       });

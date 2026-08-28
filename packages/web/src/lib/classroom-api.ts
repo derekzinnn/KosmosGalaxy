@@ -66,6 +66,9 @@ export const classroomApi = {
       body: { positionSeconds },
     }),
 
-  complete: (lessonId: string) =>
-    request<{ progress: CompleteResult }>(`/lessons/${lessonId}/complete`, { method: 'POST' }),
+  complete: (lessonId: string, positionSeconds: number) =>
+    request<{ progress: CompleteResult }>(`/lessons/${lessonId}/complete`, {
+      method: 'POST',
+      body: { positionSeconds },
+    }),
 };

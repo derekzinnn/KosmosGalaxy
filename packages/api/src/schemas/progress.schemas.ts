@@ -19,3 +19,7 @@ export const heartbeatSchema = z.object({
 });
 
 export type HeartbeatBody = z.infer<typeof heartbeatSchema>;
+
+/** The complete button reports where the player had reached, same shape. */
+export const completeSchema = heartbeatSchema;
+export type CompleteBody = z.infer<typeof completeSchema>;

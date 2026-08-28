@@ -375,20 +375,15 @@ describe('POST /lessons/:id/complete', () => {
     return { tenant, owner, track, lessons, token };
   }
 
-  it('completes a lesson the client has genuinely watched to the end', async () => {
+  it('completes a lesson once the client has reached the end', async () => {
     const { owner, lessons, token } = await assignedClient(2, 50);
 
-    // Watch it: the first heartbeat of a 50s lesson is allowed 15 x 3 = 45s,
-    // which is 90% of 50, so the watched-time gate is met.
-    await api()
-      .post(`/lessons/${lessons[0]!.id}/heartbeat`)
-      .set('Authorization', bearer(token))
-      .send({ positionSeconds: 50 })
-      .expect(200);
-
+    // Reporting a position in the last tenth of a 50s lesson is enough for the
+    // explicit button — the gate is reaching the end, not watched time.
     const response = await api()
       .post(`/lessons/${lessons[0]!.id}/complete`)
       .set('Authorization', bearer(token))
+      .send({ positionSeconds: 48 })
       .expect(200);
 
     const body = response.body as {
@@ -405,25 +400,18 @@ describe('POST /lessons/:id/complete', () => {
     expect(rows[0]!.completed_at).not.toBeNull();
   });
 
-  it('refuses to complete a lesson that was only scrubbed, not watched', async () => {
+  it('refuses to complete when the client has not reached the end', async () => {
     const { lessons, token } = await assignedClient(2, 600);
 
-    // Jump to the end of a 10-minute lesson on the first beat: the position is
-    // at the end, but watched time is capped far below the 90% needed.
-    await api()
-      .post(`/lessons/${lessons[0]!.id}/heartbeat`)
-      .set('Authorization', bearer(token))
-      .send({ positionSeconds: 600 })
-      .expect(200);
-
+    // Only a fifth of the way through a 10-minute lesson: the end is not near,
+    // so the button cannot close it.
     const response = await api()
       .post(`/lessons/${lessons[0]!.id}/complete`)
       .set('Authorization', bearer(token))
+      .send({ positionSeconds: 120 })
       .expect(400);
 
-    expect((response.body as { error: { code: string } }).error.code).toBe(
-      'LESSON_NOT_WATCHED_ENOUGH',
-    );
+    expect((response.body as { error: { code: string } }).error.code).toBe('LESSON_NOT_NEAR_END');
   });
 
   it('is idempotent — confirming an already-finished lesson is fine', async () => {
@@ -433,6 +421,7 @@ describe('POST /lessons/:id/complete', () => {
     const response = await api()
       .post(`/lessons/${lessons[0]!.id}/complete`)
       .set('Authorization', bearer(token))
+      .send({ positionSeconds: 50 })
       .expect(200);
 
     expect((response.body as { progress: { completed: boolean } }).progress.completed).toBe(true);
@@ -444,6 +433,7 @@ describe('POST /lessons/:id/complete', () => {
     await api()
       .post(`/lessons/${lessons[2]!.id}/complete`)
       .set('Authorization', bearer(token))
+      .send({ positionSeconds: 48 })
       .expect(403);
   });
 
@@ -455,6 +445,7 @@ describe('POST /lessons/:id/complete', () => {
     await api()
       .post(`/lessons/${lessons[0]!.id}/complete`)
       .set('Authorization', bearer(token))
+      .send({ positionSeconds: 48 })
       .expect(403);
   });
 });

@@ -32,7 +32,7 @@ import {
 import { authenticate } from '../middleware/authenticate.js';
 import { requireRole } from '../middleware/authorize.js';
 import { validateBody } from '../middleware/validate.js';
-import { heartbeatSchema } from '../schemas/progress.schemas.js';
+import { completeSchema, heartbeatSchema } from '../schemas/progress.schemas.js';
 import {
   assignTrackSchema,
   createTrackSchema,
@@ -119,7 +119,7 @@ lessonRouter.use(authenticate);
 lessonRouter.get('/:lessonId/playback', playbackHandler);
 lessonRouter.get('/:lessonId/progress', lessonProgressHandler);
 lessonRouter.post('/:lessonId/heartbeat', validateBody(heartbeatSchema), heartbeatHandler);
-lessonRouter.post('/:lessonId/complete', completeLessonHandler);
+lessonRouter.post('/:lessonId/complete', validateBody(completeSchema), completeLessonHandler);
 
 // ── Authoring, Kosmos staff only ──────────────────────────────────────────
 const lessonStaffOnly = requireRole('SUPERADMIN');

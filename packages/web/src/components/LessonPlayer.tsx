@@ -104,8 +104,12 @@ export function LessonPlayer({
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const failed = failedUrl === url;
 
-  const videoId = videoIdFrom(url);
-  const frameId = videoId ? `panda-${videoId}` : undefined;
+  // React owns this empty div and nothing inside it. The iframe is created and
+  // removed by hand below, so Panda's player — which reparents and rewrites the
+  // frame — never touches a node React is also tracking. That collision was the
+  // crash: on unmount React reached for an iframe Panda had moved and found
+  // null. Isolating the frame this way removes the collision at its source.
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Callbacks in refs so the effects bind to `url` alone. If they depended on
   // callback identity, an unstable parent would tear the listener down and
@@ -177,14 +181,35 @@ export function LessonPlayer({
     };
   }, [url]);
 
-  // ── Handshake + resume: Panda's own player over the iframe ──────────────
+  // ── Build the iframe by hand, then hand it to Panda's player ────────────
   useEffect(() => {
-    if (!frameId) return;
+    const container = containerRef.current;
+    if (!container) return;
+
+    setFailedUrl((prev) => (prev === url ? null : prev));
+    const videoId = videoIdFrom(url);
+    const frameId = videoId ? `panda-${videoId}` : undefined;
+
+    const iframe = document.createElement('iframe');
+    if (frameId) iframe.id = frameId;
+    iframe.src = url;
+    iframe.title = title;
+    iframe.allow = 'autoplay; fullscreen; encrypted-media; picture-in-picture';
+    iframe.allowFullscreen = true;
+    iframe.className = 'aspect-video w-full rounded-xl border-0 bg-black';
+    iframe.addEventListener('error', () => {
+      setFailedUrl(url);
+      onPlayingChangeRef.current(false);
+    });
+    container.replaceChildren(iframe);
+
     let player: PandaPlayerInstance | undefined;
     let cancelled = false;
 
+    // Panda only starts broadcasting timeupdates once its player wraps the
+    // iframe, and that player is also how the saved position is restored.
     void loadPandaApi().then(() => {
-      if (cancelled || !window.PandaPlayer) return;
+      if (cancelled || !window.PandaPlayer || !frameId) return;
       try {
         player = new window.PandaPlayer(frameId, {
           onReady: () => {
@@ -193,16 +218,27 @@ export function LessonPlayer({
           },
         });
       } catch {
-        // The raw message listener still delivers position and play state;
-        // only the resume seek is lost, and starting from the top is safe.
+        // The message listener still delivers position and play state; only
+        // the resume seek is lost, and starting from the top is safe.
       }
     });
 
     return () => {
       cancelled = true;
-      player?.destroy?.();
+      try {
+        player?.destroy?.();
+      } catch {
+        /* Panda may already have torn its own listeners down */
+      }
+      // We put the iframe here, so we take it away — never React, which would
+      // reach for a node Panda had already moved.
+      try {
+        container.replaceChildren();
+      } catch {
+        /* nothing to clear */
+      }
     };
-  }, [frameId]);
+  }, [url, title]);
 
   if (failed) {
     return (
@@ -216,20 +252,7 @@ export function LessonPlayer({
     );
   }
 
-  return (
-    <iframe
-      key={url}
-      id={frameId}
-      src={url}
-      title={title}
-      // Panda serves its own controls, watermark and DRM inside the frame.
-      allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
-      allowFullScreen
-      className="aspect-video w-full rounded-xl border-0 bg-black"
-      onError={() => {
-        setFailedUrl(url);
-        onPlayingChange(false);
-      }}
-    />
-  );
+  // The iframe lives inside this div, put there by the effect above — never by
+  // React, so Panda can reshape it without leaving React a stale node to trip on.
+  return <div ref={containerRef} className="aspect-video w-full" />;
 }

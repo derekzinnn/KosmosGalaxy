@@ -430,12 +430,22 @@ is restored: `setCurrentTime` on ready. The iframe therefore carries the id
 the message listener still delivers position and play state; only the resume
 seek is lost, and starting from the top is safe.
 
-**Explicit completion, alongside the automatic kind.** A client near the end of
-a video is offered "Marcar como concluída" (`POST /lessons/:id/complete`). It is
-gated by the same watched-time rule the heartbeat uses, not by position — the
-Phase 2 integrity kept intact, so scrubbing to the end and pressing the button
-is refused with "assista um pouco mais". A client who genuinely watched can
-close the lesson with one press even if the last auto-check has not landed.
+**Explicit completion is gated by reaching the end, not by watched time.** A
+client near the end of a video presses "Marcar como concluída"
+(`POST /lessons/:id/complete`, with the reported position); the server closes
+the lesson when that position is in the last tenth. This is a deliberate
+product choice by Kosmos, and a departure from the automatic completion the
+heartbeat still does by watched time: for onboarding — a contract client
+working through their own setup, not a paid course a viewer games — "reached
+the end" is the bar the owner wants, so a client may finish even after skipping.
+A lesson whose length is unknown still cannot be closed: there is no end to reach.
+
+**The player isolates its iframe from React.** A `<div>` React owns holds an
+iframe React does not — the effect creates and removes it by hand. Panda's
+`api.v2.js` reparents and rewrites the frame, and when React also tracked that
+node, unmounting the classroom (pressing "voltar") reached for an iframe Panda
+had moved and threw `tagName of null` into the error boundary. Owning the frame
+by hand removes the collision; `replaceChildren` puts it in and takes it out.
 
 **Still not confirmed on a live stream:** that `panda_timeupdate` arrives with
 the documented field name and cadence once a real video plays. The handshake and
