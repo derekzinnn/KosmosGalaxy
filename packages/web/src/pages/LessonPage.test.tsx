@@ -1,4 +1,5 @@
-import { screen, within } from '@testing-library/react';
+import { act, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '@/lib/api-error';
@@ -9,7 +10,7 @@ import { renderWithProviders } from '@/test/render';
 import { LessonPage } from './LessonPage';
 
 vi.mock('@/lib/classroom-api', () => ({
-  classroomApi: { playback: vi.fn(), progress: vi.fn(), heartbeat: vi.fn() },
+  classroomApi: { playback: vi.fn(), progress: vi.fn(), heartbeat: vi.fn(), complete: vi.fn() },
 }));
 
 vi.mock('@/lib/content-api', async (importOriginal) => ({
@@ -19,7 +20,18 @@ vi.mock('@/lib/content-api', async (importOriginal) => ({
 
 const playback = vi.mocked(classroomApi.playback);
 const progress = vi.mocked(classroomApi.progress);
+const complete = vi.mocked(classroomApi.complete);
 const myTracks = vi.mocked(contentApi.myTracks);
+
+/** A Panda position update, as it arrives on the window from their player. */
+function pandaTime(currentTime: number): void {
+  window.dispatchEvent(
+    new MessageEvent('message', {
+      origin: 'https://player-vz.tv.pandavideo.com.br',
+      data: { message: 'panda_timeupdate', currentTime },
+    }),
+  );
+}
 
 function lesson(id: string, title: string, order: number) {
   return {
@@ -78,6 +90,20 @@ function renderLesson(lessonId = 'lesson-1') {
 
 beforeEach(() => {
   vi.clearAllMocks();
+
+  // The heartbeat loop flushes a final beat on unmount; give the mock a
+  // resolved promise so that `.catch` has something to attach to.
+  vi.mocked(classroomApi.heartbeat).mockResolvedValue({
+    progress: {
+      lessonId: 'lesson-2',
+      maxPositionSeconds: 0,
+      totalWatchedSeconds: 0,
+      completed: false,
+      justCompleted: false,
+      trackCompleted: false,
+      unlockedLessonIds: [],
+    },
+  });
 
   myTracks.mockResolvedValue({ tracks: [track] });
 
@@ -202,5 +228,34 @@ describe('LessonPage', () => {
     renderLesson();
 
     expect(await screen.findByText('Não encontramos esta aula')).toBeInTheDocument();
+  });
+
+  it('offers "concluir" only once the video reaches the end, and completes on click', async () => {
+    const user = userEvent.setup();
+    complete.mockResolvedValue({
+      progress: {
+        lessonId: 'lesson-2',
+        completed: true,
+        justCompleted: true,
+        trackCompleted: false,
+        nextLessonId: 'lesson-3',
+        unlockedLessonIds: ['lesson-1', 'lesson-2', 'lesson-3'],
+      },
+    });
+
+    renderLesson('lesson-2');
+    await screen.findByRole('heading', { name: 'Como funciona' });
+
+    // Mid-video: no button yet.
+    act(() => pandaTime(120));
+    expect(screen.queryByRole('button', { name: /Marcar como concluída/ })).not.toBeInTheDocument();
+
+    // Into the last tenth of a 600s lesson: the button appears.
+    act(() => pandaTime(560));
+    const button = await screen.findByRole('button', { name: /Marcar como concluída/ });
+
+    await user.click(button);
+    expect(complete).toHaveBeenCalledWith('lesson-2');
+    expect(await screen.findByText(/Aula concluída/)).toBeInTheDocument();
   });
 });

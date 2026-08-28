@@ -40,14 +40,18 @@ afterEach(() => {
 });
 
 describe('LessonPlayer', () => {
-  it('loads the URL in an iframe', () => {
+  it('loads the plain signed URL in an iframe', () => {
     const { container } = render(<LessonPlayer {...baseProps} />);
+    // No fragment or query is appended: resume is done through Panda's player
+    // API (setCurrentTime), not by tacking a time onto the URL.
     expect(container.querySelector('iframe')).toHaveAttribute('src', baseProps.url);
   });
 
-  it('carries the resume position on the URL as a fragment', () => {
-    const { container } = render(<LessonPlayer {...baseProps} resumeAtSeconds={125} />);
-    expect(container.querySelector('iframe')).toHaveAttribute('src', `${baseProps.url}#t=125`);
+  it("gives the iframe the id Panda's player API needs", () => {
+    const { container } = render(<LessonPlayer {...baseProps} />);
+    // The api.v2.js player is instantiated over `panda-<videoId>`, and the
+    // video id is the `v` in the signed URL.
+    expect(container.querySelector('iframe')).toHaveAttribute('id', 'panda-abc');
   });
 
   it('reports the position from a timeupdate', () => {

@@ -365,3 +365,96 @@ describe('GET /lessons/:id/progress', () => {
       .expect(404);
   });
 });
+
+describe('POST /lessons/:id/complete', () => {
+  async function assignedClient(lessonCount = 2, durationSeconds = 100) {
+    const { tenant, owner } = await createTenantWithUsers();
+    const { track, lessons } = await createTrackWithLessons(lessonCount, { durationSeconds });
+    await assignTrackToTenant(track.id, tenant.id);
+    const token = await loginAs(owner.email);
+    return { tenant, owner, track, lessons, token };
+  }
+
+  it('completes a lesson the client has genuinely watched to the end', async () => {
+    const { owner, lessons, token } = await assignedClient(2, 50);
+
+    // Watch it: the first heartbeat of a 50s lesson is allowed 15 x 3 = 45s,
+    // which is 90% of 50, so the watched-time gate is met.
+    await api()
+      .post(`/lessons/${lessons[0]!.id}/heartbeat`)
+      .set('Authorization', bearer(token))
+      .send({ positionSeconds: 50 })
+      .expect(200);
+
+    const response = await api()
+      .post(`/lessons/${lessons[0]!.id}/complete`)
+      .set('Authorization', bearer(token))
+      .expect(200);
+
+    const body = response.body as {
+      progress: { completed: boolean; unlockedLessonIds: string[]; nextLessonId: string | null };
+    };
+    expect(body.progress.completed).toBe(true);
+    expect(body.progress.unlockedLessonIds).toContain(lessons[1]!.id);
+    expect(body.progress.nextLessonId).toBe(lessons[1]!.id);
+
+    const rows = await rawQuery<{ completed_at: Date | null }>(
+      'SELECT completed_at FROM lesson_progress WHERE user_id = $1 AND lesson_id = $2',
+      [owner.id, lessons[0]!.id],
+    );
+    expect(rows[0]!.completed_at).not.toBeNull();
+  });
+
+  it('refuses to complete a lesson that was only scrubbed, not watched', async () => {
+    const { lessons, token } = await assignedClient(2, 600);
+
+    // Jump to the end of a 10-minute lesson on the first beat: the position is
+    // at the end, but watched time is capped far below the 90% needed.
+    await api()
+      .post(`/lessons/${lessons[0]!.id}/heartbeat`)
+      .set('Authorization', bearer(token))
+      .send({ positionSeconds: 600 })
+      .expect(200);
+
+    const response = await api()
+      .post(`/lessons/${lessons[0]!.id}/complete`)
+      .set('Authorization', bearer(token))
+      .expect(400);
+
+    expect((response.body as { error: { code: string } }).error.code).toBe(
+      'LESSON_NOT_WATCHED_ENOUGH',
+    );
+  });
+
+  it('is idempotent — confirming an already-finished lesson is fine', async () => {
+    const { tenant, owner, lessons, token } = await assignedClient(1, 50);
+    await completeLesson(owner.id, lessons[0]!.id, tenant.id);
+
+    const response = await api()
+      .post(`/lessons/${lessons[0]!.id}/complete`)
+      .set('Authorization', bearer(token))
+      .expect(200);
+
+    expect((response.body as { progress: { completed: boolean } }).progress.completed).toBe(true);
+  });
+
+  it('refuses a locked lesson', async () => {
+    const { lessons, token } = await assignedClient(3, 50);
+
+    await api()
+      .post(`/lessons/${lessons[2]!.id}/complete`)
+      .set('Authorization', bearer(token))
+      .expect(403);
+  });
+
+  it('turns Kosmos staff away', async () => {
+    const staff = await createSuperadmin();
+    const { lessons } = await createTrackWithLessons(1, { durationSeconds: 50 });
+    const token = await loginAs(staff.email);
+
+    await api()
+      .post(`/lessons/${lessons[0]!.id}/complete`)
+      .set('Authorization', bearer(token))
+      .expect(403);
+  });
+});

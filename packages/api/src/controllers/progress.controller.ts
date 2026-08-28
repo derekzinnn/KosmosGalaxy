@@ -2,7 +2,11 @@ import type { Request, Response } from 'express';
 import { requireContext } from '../middleware/authenticate.js';
 import type { HeartbeatBody } from '../schemas/progress.schemas.js';
 import { issuePlayback } from '../services/playback.service.js';
-import { describeTrackProgress, recordHeartbeat } from '../services/progress.service.js';
+import {
+  describeTrackProgress,
+  markLessonComplete,
+  recordHeartbeat,
+} from '../services/progress.service.js';
 
 function param(req: Request, name: string): string {
   return req.params[name] as string;
@@ -26,6 +30,11 @@ export async function heartbeatHandler(req: Request, res: Response): Promise<voi
     body.positionSeconds,
   );
 
+  res.json({ progress });
+}
+
+export async function completeLessonHandler(req: Request, res: Response): Promise<void> {
+  const progress = await markLessonComplete(requireContext(req), param(req, 'lessonId'));
   res.json({ progress });
 }
 

@@ -60,6 +60,7 @@ const MESSAGES: Readonly<Record<string, string>> = {
 
   LESSON_LOCKED: 'Termine a aula anterior para liberar esta. Suas aulas são liberadas em ordem.',
   LESSON_HAS_NO_VIDEO: 'Esta aula ainda não tem vídeo. Avisaremos quando estiver disponível.',
+  LESSON_NOT_WATCHED_ENOUGH: 'Assista um pouco mais da aula para marcá-la como concluída.',
   STAFF_HAS_NO_PROGRESS: 'Contas da equipe Kosmos não registram progresso.',
 
   NETWORK_ERROR: 'Não conseguimos falar com o servidor. Verifique sua conexão e tente de novo.',

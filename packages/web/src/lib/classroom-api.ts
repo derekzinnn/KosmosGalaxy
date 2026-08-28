@@ -45,6 +45,15 @@ export interface HeartbeatResult {
   unlockedLessonIds: string[];
 }
 
+export interface CompleteResult {
+  lessonId: string;
+  completed: true;
+  justCompleted: boolean;
+  trackCompleted: boolean;
+  nextLessonId: string | null;
+  unlockedLessonIds: string[];
+}
+
 export const classroomApi = {
   playback: (lessonId: string) => request<{ playback: Playback }>(`/lessons/${lessonId}/playback`),
 
@@ -56,4 +65,7 @@ export const classroomApi = {
       method: 'POST',
       body: { positionSeconds },
     }),
+
+  complete: (lessonId: string) =>
+    request<{ progress: CompleteResult }>(`/lessons/${lessonId}/complete`, { method: 'POST' }),
 };

@@ -14,6 +14,24 @@ interface LessonPlayerProps {
 /** A timeupdate this many ms stale means the video is no longer playing. */
 const PAUSE_AFTER_SILENCE_MS = 1500;
 
+const PANDA_API_SRC = 'https://player.pandavideo.com.br/api.v2.js';
+
+interface PandaPlayerInstance {
+  onReady?: () => void;
+  setCurrentTime?: (seconds: number) => void;
+  destroy?: () => void;
+}
+type PandaPlayerCtor = new (
+  elementId: string,
+  options: { onReady?: () => void; onError?: (event: unknown) => void },
+) => PandaPlayerInstance;
+
+declare global {
+  interface Window {
+    PandaPlayer?: PandaPlayerCtor;
+  }
+}
+
 /** Any message from Panda arrives from a host under this domain. */
 function isPandaOrigin(origin: string): boolean {
   try {
@@ -23,28 +41,57 @@ function isPandaOrigin(origin: string): boolean {
   }
 }
 
+/** The video id Panda embeds with, carried in the `v` query of the signed URL. */
+function videoIdFrom(url: string): string | null {
+  try {
+    return new URL(url).searchParams.get('v');
+  } catch {
+    return null;
+  }
+}
+
+/** Load Panda's player API once, shared across every player on the page. */
+let pandaScriptPromise: Promise<void> | null = null;
+function loadPandaApi(): Promise<void> {
+  if (typeof window === 'undefined') return Promise.resolve();
+  if (window.PandaPlayer) return Promise.resolve();
+  pandaScriptPromise ??= new Promise<void>((resolve) => {
+    const existing = document.querySelector<HTMLScriptElement>(`script[src="${PANDA_API_SRC}"]`);
+    if (existing) {
+      existing.addEventListener('load', () => resolve(), { once: true });
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = PANDA_API_SRC;
+    script.async = true;
+    script.addEventListener('load', () => resolve(), { once: true });
+    script.addEventListener('error', () => resolve(), { once: true }); // fall back to raw messages
+    document.head.appendChild(script);
+  });
+  return pandaScriptPromise;
+}
+
 /**
  * The one component that knows how a video is put on screen.
  *
  * **This is the vendor swap point, and it is the only one.** Everything around
- * it — the unlock rule, the heartbeat, the progress bar, the resume offer —
- * works against positions in seconds and knows nothing about who hosts the
- * file. This contract (a URL and callbacks in, seconds and a playing flag out)
- * survived the move from a bare `<video>` to Panda's `<iframe>` without any of
- * that surrounding code changing, which was the entire point of keeping it thin.
+ * it — the unlock rule, the heartbeat, the progress bar, the resume — works
+ * against positions in seconds and knows nothing about who hosts the file. The
+ * contract (a URL and callbacks in, seconds and a playing flag out) is what let
+ * the surrounding classroom stay unchanged through the move from a bare
+ * `<video>` to Panda's iframe.
  *
- * Panda burns the per-viewer watermark into the picture itself, which is why
- * this has to be their iframe and cannot be a `<video>` pointed at a file: the
- * watermark is the reason Panda was chosen, and it only exists inside their
- * player. The iframe talks to us through `postMessage`.
+ * **Two channels talk to the iframe.** Panda's own `api.v2.js` player is
+ * instantiated over the iframe: that handshake is what makes Panda start
+ * broadcasting `panda_timeupdate` at all, and it is how the saved position is
+ * restored — `setCurrentTime` on ready. The position and play/pause state are
+ * then *received* by listening to the `postMessage` events that handshake
+ * turns on. If the script fails to load, the message listener still works for
+ * everything except the resume seek.
  *
- * **Playing/paused is derived from the cadence of `panda_timeupdate`, not from
- * a play/pause event.** `panda_timeupdate` is the one message Panda documents
- * by name; the others it does not. So rather than guess event names that would
- * fail silently, this treats "timeupdates are still arriving" as playing and
- * "they went quiet" as paused — which is exactly the signal the heartbeat
- * needs, and is immune to the parts of Panda's message vocabulary we cannot
- * verify. If a named play/pause/ended message does arrive, it is honoured too.
+ * **Playing/paused is derived from the cadence of `panda_timeupdate`.** It is
+ * the one message Panda documents by name; while these arrive it plays, when
+ * they go quiet it is paused. Named play/pause/ended are honoured if they come.
  */
 export function LessonPlayer({
   url,
@@ -57,19 +104,25 @@ export function LessonPlayer({
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const failed = failedUrl === url;
 
-  // Callbacks in refs so the effect below can be bound to `url` alone. If it
-  // depended on the callback identities, an unstable parent would tear the
-  // message listener down and rebuild it on every render.
+  const videoId = videoIdFrom(url);
+  const frameId = videoId ? `panda-${videoId}` : undefined;
+
+  // Callbacks in refs so the effects bind to `url` alone. If they depended on
+  // callback identity, an unstable parent would tear the listener down and
+  // rebuild it every render.
   const onPositionRef = useRef(onPosition);
   const onPlayingChangeRef = useRef(onPlayingChange);
   const onEndedRef = useRef(onEnded);
+  const resumeRef = useRef(resumeAtSeconds);
 
   useEffect(() => {
     onPositionRef.current = onPosition;
     onPlayingChangeRef.current = onPlayingChange;
     onEndedRef.current = onEnded;
+    resumeRef.current = resumeAtSeconds;
   });
 
+  // ── Receive: position and play/pause, over postMessage ──────────────────
   useEffect(() => {
     let playing = false;
     let silenceTimer: ReturnType<typeof setTimeout> | undefined;
@@ -90,7 +143,6 @@ export function LessonPlayer({
 
     const onMessage = (event: MessageEvent): void => {
       if (!isPandaOrigin(event.origin)) return;
-
       const data = event.data as { message?: unknown; currentTime?: unknown } | null;
       if (typeof data !== 'object' || data === null) return;
 
@@ -99,12 +151,9 @@ export function LessonPlayer({
           if (typeof data.currentTime === 'number' && Number.isFinite(data.currentTime)) {
             onPositionRef.current(data.currentTime);
           }
-          // The heartbeat of the player itself: while these arrive, it plays.
           markActivity();
           break;
         }
-        // These fire only if Panda names them; the cadence logic above does
-        // not depend on them, so honouring them is a bonus, not a crutch.
         case 'panda_play':
           markActivity();
           break;
@@ -121,13 +170,39 @@ export function LessonPlayer({
     };
 
     window.addEventListener('message', onMessage);
-
     return () => {
       window.removeEventListener('message', onMessage);
       if (silenceTimer) clearTimeout(silenceTimer);
       setPlaying(false);
     };
   }, [url]);
+
+  // ── Handshake + resume: Panda's own player over the iframe ──────────────
+  useEffect(() => {
+    if (!frameId) return;
+    let player: PandaPlayerInstance | undefined;
+    let cancelled = false;
+
+    void loadPandaApi().then(() => {
+      if (cancelled || !window.PandaPlayer) return;
+      try {
+        player = new window.PandaPlayer(frameId, {
+          onReady: () => {
+            const resume = Math.floor(resumeRef.current);
+            if (resume > 0) player?.setCurrentTime?.(resume);
+          },
+        });
+      } catch {
+        // The raw message listener still delivers position and play state;
+        // only the resume seek is lost, and starting from the top is safe.
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      player?.destroy?.();
+    };
+  }, [frameId]);
 
   if (failed) {
     return (
@@ -141,16 +216,11 @@ export function LessonPlayer({
     );
   }
 
-  // The resume position rides on the URL as a fragment, so it is applied by the
-  // player at load without a seek call we would have to guess the shape of, and
-  // a re-mint mid-lesson (the old token expired) does not drag the viewer back:
-  // the fragment always carries where they actually are now.
-  const src = resumeAtSeconds > 0 ? `${url}#t=${String(Math.floor(resumeAtSeconds))}` : url;
-
   return (
     <iframe
       key={url}
-      src={src}
+      id={frameId}
+      src={url}
       title={title}
       // Panda serves its own controls, watermark and DRM inside the frame.
       allow="autoplay; fullscreen; encrypted-media; picture-in-picture"

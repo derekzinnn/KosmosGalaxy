@@ -421,12 +421,28 @@ means what it says.
 that lists the library and hands back the id is the fix, and is the next piece
 of authoring UI.
 
-**One thing not yet seen on the wire:** `panda_timeupdate` is confirmed from
-the docs and the player is built around it, but no live stream has been watched
-here to confirm the field arrives as documented. If progress does not advance
-when a client plays a lesson, that is the place to look — the player derives
-playing/paused from that message's cadence on purpose, so a renamed field is a
-one-line fix.
+**The player uses Panda's own `api.v2.js`, for two reasons.** The raw
+`postMessage` listener receives `panda_timeupdate`, but Panda only starts
+broadcasting those once a `PandaPlayer` is instantiated over the iframe — the
+constructor is the handshake. That same player object is how the saved position
+is restored: `setCurrentTime` on ready. The iframe therefore carries the id
+`panda-<videoId>`, which is what the API binds to. If the script fails to load,
+the message listener still delivers position and play state; only the resume
+seek is lost, and starting from the top is safe.
+
+**Explicit completion, alongside the automatic kind.** A client near the end of
+a video is offered "Marcar como concluída" (`POST /lessons/:id/complete`). It is
+gated by the same watched-time rule the heartbeat uses, not by position — the
+Phase 2 integrity kept intact, so scrubbing to the end and pressing the button
+is refused with "assista um pouco mais". A client who genuinely watched can
+close the lesson with one press even if the last auto-check has not landed.
+
+**Still not confirmed on a live stream:** that `panda_timeupdate` arrives with
+the documented field name and cadence once a real video plays. The handshake and
+resume are wired per Panda's docs and the button flow is verified end to end
+(the server refused a scrubbed completion with 400), but a real playthrough is
+what proves the position actually advances. If it does not, the field name in
+`LessonPlayer` is the one-line place to look.
 
 ### Things flagged as risky
 

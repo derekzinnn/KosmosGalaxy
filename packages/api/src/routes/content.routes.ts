@@ -24,6 +24,7 @@ import {
   updateTrackHandler,
 } from '../controllers/content.controller.js';
 import {
+  completeLessonHandler,
   heartbeatHandler,
   lessonProgressHandler,
   playbackHandler,
@@ -118,6 +119,7 @@ lessonRouter.use(authenticate);
 lessonRouter.get('/:lessonId/playback', playbackHandler);
 lessonRouter.get('/:lessonId/progress', lessonProgressHandler);
 lessonRouter.post('/:lessonId/heartbeat', validateBody(heartbeatSchema), heartbeatHandler);
+lessonRouter.post('/:lessonId/complete', completeLessonHandler);
 
 // ── Authoring, Kosmos staff only ──────────────────────────────────────────
 const lessonStaffOnly = requireRole('SUPERADMIN');

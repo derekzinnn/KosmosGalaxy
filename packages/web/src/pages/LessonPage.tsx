@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, ChevronLeft, FileText, Link2, Lock, PlayCircle } from 'lucide-react';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
@@ -6,6 +6,7 @@ import { LessonPlayer } from '@/components/LessonPlayer';
 import { ErrorState } from '@/components/states/ErrorState';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Alert } from '@/components/ui/alert';
 import { Card } from '@/components/ui/card';
 import { useHeartbeat } from '@/hooks/useHeartbeat';
 import { ApiError, messageFor } from '@/lib/api-error';
@@ -47,6 +48,12 @@ export function LessonPage() {
   const positionRef = useRef(0);
   const [playing, setPlaying] = useState(false);
   const [justCompleted, setJustCompleted] = useState(false);
+  // Whether the player has reached the last stretch of the video, which is
+  // when the explicit "concluir" button is offered. Kept in state (not the
+  // position ref) only as a boolean, so it flips the button on once rather
+  // than re-rendering on every timeupdate.
+  const [nearEnd, setNearEnd] = useState(false);
+  const [completedNextId, setCompletedNextId] = useState<string | null>(null);
 
   const tracks = useQuery({ queryKey: ['my-tracks'], queryFn: contentApi.myTracks });
 
@@ -93,6 +100,16 @@ export function LessonPage() {
     intervalSeconds: HEARTBEAT_SECONDS,
     getPosition,
     onResult: handleResult,
+  });
+
+  const complete = useMutation({
+    mutationFn: () => classroomApi.complete(lessonId),
+    onSuccess: (data) => {
+      setJustCompleted(true);
+      setCompletedNextId(data.progress.nextLessonId);
+      void queryClient.invalidateQueries({ queryKey: ['lesson-progress'] });
+      void queryClient.invalidateQueries({ queryKey: ['my-tracks'] });
+    },
   });
 
   if (tracks.isPending || progress.isPending) {
@@ -174,8 +191,14 @@ export function LessonPage() {
               resumeAtSeconds={playback.data.playback.resumeAtSeconds}
               onPosition={(seconds) => {
                 positionRef.current = seconds;
+                const duration = playback.data.playback.durationSeconds;
+                if (duration && duration > 0) {
+                  const reached = seconds >= duration * 0.9;
+                  setNearEnd((prev) => (prev === reached ? prev : reached));
+                }
               }}
               onPlayingChange={setPlaying}
+              onEnded={() => setNearEnd(true)}
             />
           )}
 
@@ -186,6 +209,21 @@ export function LessonPage() {
             ) : null}
           </div>
 
+          {!justCompleted && !thisLesson?.completed && nearEnd ? (
+            <div className="space-y-2">
+              {complete.isError ? <Alert variant="info">{messageFor(complete.error)}</Alert> : null}
+              <Button
+                size="lg"
+                className="w-full sm:w-auto"
+                loading={complete.isPending}
+                onClick={() => complete.mutate()}
+              >
+                <CheckCircle2 className="size-4" aria-hidden />
+                Marcar como concluída
+              </Button>
+            </div>
+          ) : null}
+
           {justCompleted ? (
             <Card className="border-accent p-5">
               <div className="flex flex-wrap items-center justify-between gap-4">
@@ -193,11 +231,12 @@ export function LessonPage() {
                   <CheckCircle2 className="size-5 text-accent-foreground" aria-hidden />
                   <p className="text-sm font-medium">Aula concluída. Bom trabalho!</p>
                 </div>
-                {nextLessonId ? (
+                {(completedNextId ?? nextLessonId) ? (
                   <Button
                     onClick={() => {
                       setJustCompleted(false);
-                      void navigate(`/aulas/${nextLessonId}`);
+                      setNearEnd(false);
+                      void navigate(`/aulas/${completedNextId ?? nextLessonId ?? ''}`);
                     }}
                   >
                     Próxima aula
