@@ -38,6 +38,8 @@ export interface Track {
   title: string;
   description: string | null;
   published: boolean;
+  /** Banner URL, or null/absent to fall back to the generated orbit cover. */
+  coverImageUrl?: string | null;
   createdAt: string;
   updatedAt: string;
   modules?: Module[];
@@ -98,6 +100,17 @@ export const contentApi = {
     request<{ track: Track }>(`/tracks/${trackId}`, { method: 'PATCH', body }),
 
   deleteTrack: (trackId: string) => request<void>(`/tracks/${trackId}`, { method: 'DELETE' }),
+
+  /** Upload a banner image. The file is sent raw, with its own content type. */
+  uploadCover: (trackId: string, file: File) =>
+    request<{ track: Track }>(`/tracks/${trackId}/cover`, {
+      method: 'POST',
+      rawBody: file,
+      rawContentType: file.type,
+    }),
+
+  removeCover: (trackId: string) =>
+    request<{ track: Track }>(`/tracks/${trackId}/cover`, { method: 'DELETE' }),
 
   readiness: (trackId: string) =>
     request<{ ready: boolean; problems: PublishProblem[] }>(`/tracks/${trackId}/readiness`),

@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, raw } from 'express';
 import {
   assignTrackHandler,
   createLessonHandler,
@@ -29,6 +29,10 @@ import {
   lessonProgressHandler,
   playbackHandler,
 } from '../controllers/progress.controller.js';
+import {
+  removeTrackCoverHandler,
+  setTrackCoverHandler,
+} from '../controllers/track-cover.controller.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { requireRole } from '../middleware/authorize.js';
 import { validateBody } from '../middleware/validate.js';
@@ -68,6 +72,21 @@ contentRouter.get('/', staffOnly, listTracksHandler);
 contentRouter.get('/:trackId', staffOnly, getTrackHandler);
 contentRouter.patch('/:trackId', staffOnly, validateBody(updateTrackSchema), updateTrackHandler);
 contentRouter.delete('/:trackId', staffOnly, deleteTrackHandler);
+
+/**
+ * The banner image. The body is the raw image, not multipart nor JSON, so
+ * `express.raw` buffers it for exactly the three allowed types and caps it at
+ * 5 MB before it reaches the handler; anything else arrives as a non-Buffer
+ * body the handler rejects. The bucket enforces the same ceiling as a second
+ * fence.
+ */
+contentRouter.post(
+  '/:trackId/cover',
+  staffOnly,
+  raw({ type: ['image/jpeg', 'image/png', 'image/webp'], limit: '5mb' }),
+  setTrackCoverHandler,
+);
+contentRouter.delete('/:trackId/cover', staffOnly, removeTrackCoverHandler);
 
 contentRouter.get('/:trackId/readiness', staffOnly, trackReadinessHandler);
 contentRouter.post('/:trackId/publish', staffOnly, publishTrackHandler);

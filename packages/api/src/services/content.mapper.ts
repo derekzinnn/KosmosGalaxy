@@ -1,5 +1,6 @@
 import type { Prisma } from '../generated/prisma/client.js';
 import type { ResourceType } from '../generated/prisma/enums.js';
+import { storageProvider } from './storage/index.js';
 
 /**
  * Content shapes that leave the API.
@@ -47,6 +48,8 @@ export interface PublicTrack {
   readonly title: string;
   readonly description: string | null;
   readonly published: boolean;
+  /** Public URL of the banner, or null to fall back to the generated cover. */
+  readonly coverImageUrl: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
   readonly modules?: readonly PublicModule[];
@@ -124,6 +127,7 @@ export function toPublicTrack(
     title: track.title,
     description: track.description,
     published: track.published,
+    coverImageUrl: track.coverImagePath ? storageProvider().publicUrl(track.coverImagePath) : null,
     createdAt: track.createdAt.toISOString(),
     updatedAt: track.updatedAt.toISOString(),
   };

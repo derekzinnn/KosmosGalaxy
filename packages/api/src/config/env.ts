@@ -97,6 +97,23 @@ const envSchema = z
     LOG_LEVEL: z
       .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
       .default('info'),
+
+    /**
+     * Where uploaded images (track banners) are stored. `none` is the default
+     * so the service boots with no storage configured — the upload endpoint
+     * then answers a clear 503 rather than the process refusing to start.
+     * `supabase` uses Supabase Storage over its REST API.
+     */
+    STORAGE_PROVIDER: z.enum(['none', 'supabase']).default('none'),
+    /** The Supabase project URL, e.g. https://xxxx.supabase.co */
+    SUPABASE_URL: z.url().optional(),
+    /**
+     * The service-role key. Secret, server-only — it bypasses row-level
+     * security, so it must never reach a browser. Used to sign Storage writes.
+     */
+    SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
+    /** The public bucket that holds banner images. */
+    SUPABASE_STORAGE_BUCKET: z.string().min(1).default('track-banners'),
   })
   .superRefine((value, ctx) => {
     if (value.NODE_ENV === 'production' && value.JWT_SECRET.includes('change-me')) {
@@ -120,6 +137,22 @@ const envSchema = z
         path: ['DATABASE_URL_TEST'],
         message: 'DATABASE_URL_TEST is required when NODE_ENV=test',
       });
+    }
+    if (value.STORAGE_PROVIDER === 'supabase') {
+      if (!value.SUPABASE_URL) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['SUPABASE_URL'],
+          message: 'SUPABASE_URL is required when STORAGE_PROVIDER=supabase',
+        });
+      }
+      if (!value.SUPABASE_SERVICE_ROLE_KEY) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['SUPABASE_SERVICE_ROLE_KEY'],
+          message: 'SUPABASE_SERVICE_ROLE_KEY is required when STORAGE_PROVIDER=supabase',
+        });
+      }
     }
   });
 

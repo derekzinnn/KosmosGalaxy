@@ -99,7 +99,7 @@ function CourseCard({ track }: { track: MyTrack }) {
   const card = (
     <div className="group flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card transition-all hover:-translate-y-0.5 hover:border-ring/40 hover:shadow-md">
       <div className="relative aspect-[5/2] w-full">
-        <TrackCover seed={track.id} className="size-full" />
+        <TrackCover seed={track.id} imageUrl={track.coverImageUrl} className="size-full" />
         {completed ? (
           <span className="absolute top-3 right-3 flex items-center gap-1 rounded-full bg-success px-2.5 py-1 text-xs font-medium text-success-foreground">
             <CheckCircle2 className="size-3.5" aria-hidden />

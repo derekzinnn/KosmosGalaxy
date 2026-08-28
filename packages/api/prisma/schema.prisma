@@ -165,6 +165,11 @@ model Track {
   title       String
   description String?
   published   Boolean  @default(false)
+  /// Object path of the banner image inside the storage bucket, e.g.
+  /// `tracks/<id>/cover-<uuid>.jpg`. The public URL is derived from it and the
+  /// configured bucket; the raw path is stored so the bucket can move without a
+  /// data migration. Null falls back to the generated orbit cover.
+  coverImagePath String? @map("cover_image_path")
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 

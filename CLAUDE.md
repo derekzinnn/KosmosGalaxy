@@ -289,10 +289,12 @@ the lesson exists, which is what somebody enumerating ids is trying to learn.
 
 ### Added in Phase 4
 
-| Method | Path           | Access     |
-| ------ | -------------- | ---------- |
-| `GET`  | `/audit-logs`  | SUPERADMIN |
-| `GET`  | `/funnel`      | SUPERADMIN |
+| Method   | Path                  | Access     |
+| -------- | --------------------- | ---------- |
+| `GET`    | `/audit-logs`         | SUPERADMIN |
+| `GET`    | `/funnel`             | SUPERADMIN |
+| `POST`   | `/tracks/:id/cover`   | SUPERADMIN |
+| `DELETE` | `/tracks/:id/cover`   | SUPERADMIN |
 
 `/funnel` is the onboarding overview: every client's furthest stage (invited →
 joined → started → completed) plus the cumulative counts. Like the audit read
@@ -303,6 +305,19 @@ of column-thin queries rather than one join, which at onboarding scale is both
 cheaper to run and the place where every stage rule lives in one readable spot.
 A zero denominator (a client with no assigned track) never reads as
 "completed"; it stays at whatever stage its people reached.
+
+The two `/cover` routes set and clear a track's banner image. The body is the
+raw image (not multipart), buffered by `express.raw` for the three allowed
+types and capped at 5 MB before the handler sees it. Storage sits behind a thin
+`StorageProvider` seam — `upload` / `remove` / `publicUrl` — mirroring
+`EmailProvider` and `VideoProvider`: `STORAGE_PROVIDER=none` (the default) boots
+with no credentials and answers the upload with 503, `supabase` uploads to a
+public bucket over its REST API with the service-role key. Only the object
+_path_ is stored on `Track.coverImagePath`; the public URL is derived in the
+mapper, so the bucket can move without a data migration. The bytes are uploaded
+before the path is committed, and the previous object is deleted only after —
+best-effort, since a leftover object is cheaper than a lost update. A null path
+falls back to the generated orbit `TrackCover`, so a banner is always optional.
 
 
 The read side of the audit ledger. **This one _is_ behind a role gate**, and
@@ -549,6 +564,14 @@ to boot in production if it still holds the example value.
 in production.
 
 **Postgres region** São Paulo, per the Supabase project.
+
+**Supabase Storage bucket for banners.** Track banners need
+`STORAGE_PROVIDER=supabase`, `SUPABASE_URL`, and `SUPABASE_SERVICE_ROLE_KEY`
+(secret, server-only), plus a **public** bucket named by
+`SUPABASE_STORAGE_BUCKET` (default `track-banners`). The bucket should cap size
+at 5 MB and restrict MIME types to `image/jpeg`, `image/png`, `image/webp` — the
+API enforces the same, so the bucket limits are a second fence. With
+`STORAGE_PROVIDER=none` the app runs fine and the upload endpoint answers 503.
 
 **Not yet needed, but coming:** Redis for shared rate limiting once the API runs
 more than one instance; a transactional email vendor's API key; Panda Video

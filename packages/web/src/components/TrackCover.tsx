@@ -11,9 +11,31 @@
  * never a rainbow. It is the one place colour is spent freely; everything
  * around it stays quiet.
  */
-export function TrackCover({ seed, className }: { seed: string; className?: string }) {
+export function TrackCover({
+  seed,
+  className,
+  imageUrl,
+}: {
+  seed: string;
+  className?: string;
+  /** An uploaded banner. When present it replaces the generated cosmos. */
+  imageUrl?: string | null;
+}) {
   const hue = hueFromSeed(seed);
   const tilt = (hashOf(seed) % 60) - 30;
+
+  if (imageUrl) {
+    return (
+      <img
+        src={imageUrl}
+        alt=""
+        aria-hidden
+        loading="lazy"
+        className={className}
+        style={{ objectFit: 'cover' }}
+      />
+    );
+  }
 
   return (
     <div

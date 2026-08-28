@@ -47,6 +47,13 @@ export interface AuthenticatedUser {
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
   body?: unknown;
+  /**
+   * A raw (non-JSON) body — an image upload, say. When set, it is sent as-is
+   * with `rawContentType` and `body` is ignored, so the same refresh-and-retry
+   * path covers a binary upload as covers every JSON call.
+   */
+  rawBody?: BodyInit;
+  rawContentType?: string;
   /** Set for the refresh call itself, so a failed refresh cannot recurse. */
   skipRefresh?: boolean;
 }
@@ -135,14 +142,22 @@ function refreshSession(): Promise<SessionResponse | null> {
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const send = async (): Promise<Response> => {
     const headers: Record<string, string> = {};
-    if (options.body !== undefined) headers['Content-Type'] = 'application/json';
     if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+
+    let body: BodyInit | undefined;
+    if (options.rawBody !== undefined) {
+      body = options.rawBody;
+      if (options.rawContentType) headers['Content-Type'] = options.rawContentType;
+    } else if (options.body !== undefined) {
+      headers['Content-Type'] = 'application/json';
+      body = JSON.stringify(options.body);
+    }
 
     return fetch(`${API_URL}${path}`, {
       method: options.method ?? 'GET',
       credentials: 'include',
       headers,
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      body,
     });
   };
 

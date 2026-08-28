@@ -14,6 +14,7 @@ import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { AddItemPopover } from '@/components/admin/AddItemPopover';
 import { LessonVideoModal } from '@/components/admin/LessonVideoModal';
+import { TrackBannerEditor } from '@/components/admin/TrackBannerEditor';
 import { ErrorState } from '@/components/states/ErrorState';
 import { FullPageLoader } from '@/components/states/FullPageLoader';
 import { Alert } from '@/components/ui/alert';
@@ -171,6 +172,8 @@ export function TrackEditorPage() {
           </Alert>
         ) : null}
       </header>
+
+      <TrackBannerEditor track={current} />
 
       <Tabs defaultValue="content" className="space-y-6">
         <TabsList>
