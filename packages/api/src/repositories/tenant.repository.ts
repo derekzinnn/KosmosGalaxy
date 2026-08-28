@@ -1,4 +1,5 @@
 import type { Prisma } from '../generated/prisma/client.js';
+import type { DbClient } from '../db/prisma.js';
 import type { ScopedDb } from '../db/scoped-db.js';
 
 export function findTenantById(db: ScopedDb, id: string): Promise<Prisma.TenantModel | null> {
@@ -7,4 +8,12 @@ export function findTenantById(db: ScopedDb, id: string): Promise<Prisma.TenantM
 
 export function listTenants(db: ScopedDb): Promise<Prisma.TenantModel[]> {
   return db.tenant.findMany({ orderBy: [{ name: 'asc' }] });
+}
+
+export function updateTenant(
+  client: DbClient,
+  id: string,
+  data: Prisma.TenantUncheckedUpdateInput,
+): Promise<Prisma.TenantModel> {
+  return client.tenant.update({ where: { id }, data });
 }

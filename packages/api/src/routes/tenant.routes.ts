@@ -3,11 +3,12 @@ import {
   createTenantHandler,
   getTenantHandler,
   listTenantsHandler,
+  updateTenantHandler,
 } from '../controllers/tenant.controller.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { requireRole } from '../middleware/authorize.js';
 import { validateBody } from '../middleware/validate.js';
-import { createTenantSchema } from '../schemas/tenant.schemas.js';
+import { createTenantSchema, updateTenantSchema } from '../schemas/tenant.schemas.js';
 
 export const tenantRouter: Router = Router();
 
@@ -27,3 +28,10 @@ tenantRouter.post(
  */
 tenantRouter.get('/', listTenantsHandler);
 tenantRouter.get('/:id', getTenantHandler);
+
+tenantRouter.patch(
+  '/:id',
+  requireRole('SUPERADMIN'),
+  validateBody(updateTenantSchema),
+  updateTenantHandler,
+);

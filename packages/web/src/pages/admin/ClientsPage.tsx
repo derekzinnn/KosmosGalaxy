@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
-import { Building2, MailPlus, Plus } from 'lucide-react';
+import { Building2, MailPlus, Pencil, Plus } from 'lucide-react';
 import { InviteOwnerModal } from '@/components/admin/InviteOwnerModal';
 import { NewClientModal } from '@/components/admin/NewClientModal';
+import { RenameClientModal } from '@/components/admin/RenameClientModal';
 import { EmptyState } from '@/components/states/EmptyState';
 import { ErrorState } from '@/components/states/ErrorState';
 import { Badge } from '@/components/ui/badge';
@@ -103,14 +104,25 @@ function ClientCard({ tenant }: { tenant: Tenant }) {
         <p className="font-mono text-xs text-muted-foreground">/{tenant.slug}</p>
       </div>
 
-      <InviteOwnerModal tenantId={tenant.id} tenantName={tenant.name}>
-        <ModalTrigger asChild>
-          <Button variant="outline" size="sm">
-            <MailPlus aria-hidden />
-            Convidar responsável
-          </Button>
-        </ModalTrigger>
-      </InviteOwnerModal>
+      <div className="flex flex-wrap items-center gap-2">
+        <RenameClientModal tenantId={tenant.id} currentName={tenant.name}>
+          <ModalTrigger asChild>
+            <Button variant="ghost" size="sm">
+              <Pencil aria-hidden />
+              Editar nome
+            </Button>
+          </ModalTrigger>
+        </RenameClientModal>
+
+        <InviteOwnerModal tenantId={tenant.id} tenantName={tenant.name}>
+          <ModalTrigger asChild>
+            <Button variant="outline" size="sm">
+              <MailPlus aria-hidden />
+              Convidar responsável
+            </Button>
+          </ModalTrigger>
+        </InviteOwnerModal>
+      </div>
     </Card>
   );
 }

@@ -199,4 +199,7 @@ export const tenantApi = {
 
   create: (body: { name: string; slug: string }) =>
     request<{ tenant: Tenant }>('/tenants', { method: 'POST', body }),
+
+  update: (id: string, body: { name: string }) =>
+    request<{ tenant: Tenant }>(`/tenants/${id}`, { method: 'PATCH', body }),
 };

@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import { requireContext } from '../middleware/authenticate.js';
-import type { CreateTenantBody } from '../schemas/tenant.schemas.js';
-import { createTenant, getTenant, listTenants } from '../services/tenant.service.js';
+import type { CreateTenantBody, UpdateTenantBody } from '../schemas/tenant.schemas.js';
+import { createTenant, getTenant, listTenants, updateTenant } from '../services/tenant.service.js';
 
 export async function createTenantHandler(req: Request, res: Response): Promise<void> {
   const body = req.body as CreateTenantBody;
@@ -22,4 +22,10 @@ export async function listTenantsHandler(req: Request, res: Response): Promise<v
 export async function getTenantHandler(req: Request, res: Response): Promise<void> {
   const id = req.params.id as string;
   res.json({ tenant: await getTenant(requireContext(req), id) });
+}
+
+export async function updateTenantHandler(req: Request, res: Response): Promise<void> {
+  const id = req.params.id as string;
+  const body = req.body as UpdateTenantBody;
+  res.json({ tenant: await updateTenant(requireContext(req), id, { name: body.name }) });
 }

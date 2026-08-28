@@ -1,7 +1,11 @@
 import { prisma } from '../db/prisma.js';
 import { runInGlobalScope } from '../db/scoped-db.js';
 import { ConflictError, NotFoundError } from '../lib/errors.js';
-import { findTenantById, listTenants as selectTenants } from '../repositories/tenant.repository.js';
+import {
+  findTenantById,
+  listTenants as selectTenants,
+  updateTenant as persistTenantUpdate,
+} from '../repositories/tenant.repository.js';
 import type { RequestContext } from '../types/request-context.js';
 import { metadataOf } from '../types/request-context.js';
 import { AuditAction, AuditEntity } from './audit.actions.js';
@@ -53,6 +57,43 @@ export async function createTenant(
       });
 
       return created;
+    });
+
+    return toPublicTenant(tenant);
+  });
+}
+
+/**
+ * Renaming a client company. Kosmos staff only, which the route enforces.
+ *
+ * Runs in a global scope because staff have no tenant of their own; the
+ * before/after names are recorded so the audit log shows exactly what a name
+ * used to be. The slug is untouched — a rename must not break a shared link.
+ */
+export function updateTenant(
+  context: RequestContext,
+  id: string,
+  command: { readonly name: string },
+): Promise<PublicTenant> {
+  return runInGlobalScope('superadmin:tenant-update', async (db) => {
+    const existing = await findTenantById(db, id);
+    if (!existing) throw new NotFoundError('Tenant not found', 'TENANT_NOT_FOUND');
+
+    const tenant = await prisma.$transaction(async (tx) => {
+      const updated = await persistTenantUpdate(tx, id, { name: command.name });
+
+      await audit(tx, {
+        action: AuditAction.TENANT_UPDATED,
+        actor: { id: context.userId, email: context.email, role: context.role },
+        tenantId: id,
+        entityType: AuditEntity.TENANT,
+        entityId: id,
+        before: { name: existing.name },
+        after: { name: updated.name },
+        request: metadataOf(context),
+      });
+
+      return updated;
     });
 
     return toPublicTenant(tenant);

@@ -178,7 +178,7 @@ fails the build if one is added.
 
 Actions recorded in Phase 0: `USER_LOGIN_SUCCEEDED`, `USER_LOGIN_FAILED`,
 `USER_LOGGED_OUT`, `USER_CREATED`, `USER_ROLE_CHANGED`, `USER_SUSPENDED`,
-`USER_REACTIVATED`, `TENANT_CREATED`, `INVITATION_SENT`, `INVITATION_ACCEPTED`,
+`USER_REACTIVATED`, `TENANT_CREATED`, `TENANT_UPDATED`, `INVITATION_SENT`, `INVITATION_ACCEPTED`,
 `INVITATION_REVOKED`, `PASSWORD_RESET_REQUESTED`, `PASSWORD_RESET_COMPLETED`,
 `REFRESH_TOKEN_REUSE_DETECTED`, `TENANT_SCOPE_OVERRIDDEN`.
 
@@ -269,6 +269,7 @@ does not exist verifies against a throwaway hash so it takes just as long.
 | `POST` | `/tenants`                   | SUPERADMIN               |
 | `GET`  | `/tenants`                   | Authenticated (scoped)   |
 | `GET`  | `/tenants/:id`               | Authenticated (scoped)   |
+| `PATCH`| `/tenants/:id`               | SUPERADMIN               |
 
 ### Added in Phase 2
 
