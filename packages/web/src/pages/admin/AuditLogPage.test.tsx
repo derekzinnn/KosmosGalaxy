@@ -64,8 +64,9 @@ describe('AuditLogPage', () => {
     expect(await screen.findByText('Entrou na conta')).toBeInTheDocument();
     expect(screen.getByText(/ana@empresa\.com\.br/)).toBeInTheDocument();
     expect(screen.getByText(/Empresa Alfa/)).toBeInTheDocument();
-    // A short, complete page ends the log rather than offering more.
-    expect(screen.getByText('Fim do registro.')).toBeInTheDocument();
+    // A single, complete page: page 1, and "Próxima" has nowhere to go.
+    expect(screen.getByText('Página 1')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Próxima/ })).toBeDisabled();
   });
 
   it('flags a security event and lets its details expand', async () => {
@@ -92,7 +93,7 @@ describe('AuditLogPage', () => {
     expect(screen.getByText(/superadmin:drill-down/)).toBeInTheDocument();
   });
 
-  it('walks to the next page when "Carregar mais" is pressed', async () => {
+  it('pages forward by cursor and back again', async () => {
     const page1: AuditLogList = {
       entries: [entry({ id: 'a1', tenantName: 'Empresa Alfa' })],
       nextCursor: 'cursor-1',
@@ -105,12 +106,21 @@ describe('AuditLogPage', () => {
 
     renderPage();
 
-    const more = await screen.findByRole('button', { name: 'Carregar mais' });
-    await userEvent.click(more);
+    // Page 1: "Anterior" is disabled, "Próxima" is offered.
+    expect(await screen.findByText('Entrou na conta')).toBeInTheDocument();
+    expect(screen.getByText('Página 1')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Anterior/ })).toBeDisabled();
 
-    // The second page is appended, not swapped in.
+    await userEvent.click(screen.getByRole('button', { name: /Próxima/ }));
+
+    // Page 2: the next page swaps in, fetched with the first page's cursor.
     expect(await screen.findByText('Convite enviado')).toBeInTheDocument();
-    expect(screen.getByText(/Empresa Alfa/)).toBeInTheDocument();
+    expect(screen.getByText('Página 2')).toBeInTheDocument();
     expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ cursor: 'cursor-1' }));
+
+    // Back to page 1.
+    await userEvent.click(screen.getByRole('button', { name: /Anterior/ }));
+    expect(await screen.findByText('Página 1')).toBeInTheDocument();
+    expect(screen.getByText('Entrou na conta')).toBeInTheDocument();
   });
 });

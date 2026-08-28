@@ -1,5 +1,5 @@
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { ScrollText, ShieldAlert, Sparkles } from 'lucide-react';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { ChevronLeft, ChevronRight, ScrollText, ShieldAlert, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 import { EmptyState } from '@/components/states/EmptyState';
 import { ErrorState } from '@/components/states/ErrorState';
@@ -31,32 +31,54 @@ const dateTime = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyl
  * The audit viewer — Phase 4's window onto the ledger every other phase writes
  * to. Kosmos staff only; the route and the service both enforce that.
  *
- * The list is a keyset-paginated timeline: newest first, "Carregar mais" walks
- * back through history by cursor. Two filters cover the questions actually
- * asked of a log like this — "what happened" (by action) and "to whom" (by
- * client) — and the security-sensitive events carry a red marker so a reused
- * token or a staff override does not blend into routine traffic.
+ * The list is a keyset-paginated timeline, newest first, walked one page at a
+ * time. Paging is by cursor rather than offset (ids are UUIDv7, so "newest
+ * first" is stable), and a stack of the cursors already visited is what lets
+ * "Anterior" step back. Two filters cover the questions actually asked of a log
+ * like this — "what happened" (by action) and "to whom" (by client) — and the
+ * security-sensitive events carry a red marker so a reused token or a staff
+ * override does not blend into routine traffic.
  */
+const PAGE_SIZE = 50;
+
 export function AuditLogPage() {
-  const [action, setAction] = useState<string>(ALL);
-  const [tenantId, setTenantId] = useState<string>(ALL);
+  const [action, setActionRaw] = useState<string>(ALL);
+  const [tenantId, setTenantIdRaw] = useState<string>(ALL);
+  // The cursor used to reach each page; `[undefined]` is page 1. Pushing the
+  // current page's nextCursor advances; popping goes back.
+  const [cursors, setCursors] = useState<(string | undefined)[]>([undefined]);
+
+  const page = cursors.length;
+  const currentCursor = cursors[page - 1];
 
   const tenants = useQuery({ queryKey: ['tenants'], queryFn: tenantApi.list });
 
-  const log = useInfiniteQuery({
-    queryKey: ['audit-logs', action, tenantId],
-    queryFn: ({ pageParam }) =>
+  const log = useQuery({
+    queryKey: ['audit-logs', action, tenantId, currentCursor ?? ''],
+    queryFn: () =>
       auditApi.list({
         action: action === ALL ? undefined : action,
         tenantId: tenantId === ALL ? undefined : tenantId,
-        cursor: pageParam,
-        limit: 50,
+        cursor: currentCursor,
+        limit: PAGE_SIZE,
       }),
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    // Keep the current page on screen while the next one loads, so paging does
+    // not flash the skeleton between clicks.
+    placeholderData: keepPreviousData,
   });
 
-  const entries = log.data?.pages.flatMap((page) => page.entries) ?? [];
+  // Changing a filter starts the listing over at page 1.
+  function setAction(next: string) {
+    setActionRaw(next);
+    setCursors([undefined]);
+  }
+  function setTenantId(next: string) {
+    setTenantIdRaw(next);
+    setCursors([undefined]);
+  }
+
+  const entries = log.data?.entries ?? [];
+  const nextCursor = log.data?.nextCursor ?? null;
 
   return (
     <div className="space-y-8">
@@ -108,7 +130,7 @@ export function AuditLogPage() {
         <Card>
           <ErrorState description={messageFor(log.error)} onRetry={() => void log.refetch()} />
         </Card>
-      ) : entries.length === 0 ? (
+      ) : entries.length === 0 && page === 1 ? (
         <Card>
           <EmptyState
             icon={ScrollText}
@@ -124,19 +146,32 @@ export function AuditLogPage() {
             ))}
           </ul>
 
-          {log.hasNextPage ? (
-            <div className="flex justify-center">
-              <Button
-                variant="secondary"
-                onClick={() => void log.fetchNextPage()}
-                disabled={log.isFetchingNextPage}
-              >
-                {log.isFetchingNextPage ? 'Carregando…' : 'Carregar mais'}
-              </Button>
-            </div>
-          ) : (
-            <p className="text-center text-xs text-muted-foreground">Fim do registro.</p>
-          )}
+          <nav
+            className="flex items-center justify-between gap-3"
+            aria-label="Paginação do registro"
+          >
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page === 1 || log.isFetching}
+              onClick={() => setCursors((stack) => stack.slice(0, -1))}
+            >
+              <ChevronLeft aria-hidden />
+              Anterior
+            </Button>
+
+            <span className="text-xs text-muted-foreground">Página {page}</span>
+
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!nextCursor || log.isFetching}
+              onClick={() => setCursors((stack) => [...stack, nextCursor ?? undefined])}
+            >
+              Próxima
+              <ChevronRight aria-hidden />
+            </Button>
+          </nav>
         </>
       )}
     </div>
