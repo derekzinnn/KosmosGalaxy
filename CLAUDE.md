@@ -320,6 +320,11 @@ mapper, so the bucket can move without a data migration. The bytes are uploaded
 before the path is committed, and the previous object is deleted only after —
 best-effort, since a leftover object is cheaper than a lost update. A null path
 falls back to the generated orbit `TrackCover`, so a banner is always optional.
+On the web, a picked image goes through a client-side cropper before upload:
+the author frames it inside the banner's 5:2 window (pan + zoom) and the result
+is drawn to a fixed 1280×512 JPEG, so every stored banner has the exact shape
+the card shows — no server-side squish, and a bounded file size — whatever the
+original was.
 
 `/clients/:tenantId` is the **per-client drill-down** — one company's onboarding
 lesson by lesson. Unlike the funnel, opening it is the audited act: the service
