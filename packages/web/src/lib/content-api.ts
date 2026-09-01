@@ -202,4 +202,10 @@ export const tenantApi = {
 
   update: (id: string, body: { name: string }) =>
     request<{ tenant: Tenant }>(`/tenants/${id}`, { method: 'PATCH', body }),
+
+  archive: (id: string) =>
+    request<{ tenant: Tenant }>(`/tenants/${id}/archive`, { method: 'POST' }),
+
+  reactivate: (id: string) =>
+    request<{ tenant: Tenant }>(`/tenants/${id}/reactivate`, { method: 'POST' }),
 };
