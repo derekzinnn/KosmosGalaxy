@@ -10,6 +10,8 @@ export interface AuthContextValue {
   logout: () => Promise<void>;
   /** Used by the invite flow, which signs the user in as part of accepting. */
   adoptSession: (session: SessionResponse) => void;
+  /** Replace the signed-in user in place — after they edit their own profile. */
+  updateUser: (user: AuthenticatedUser) => void;
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null);

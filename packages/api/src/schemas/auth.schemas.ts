@@ -18,6 +18,15 @@ export const resetPasswordSchema = z.object({
   password: passwordSchema,
 });
 
+export const updateProfileSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(2, 'Informe seu nome')
+    .max(120, 'O nome é longo demais'),
+});
+
 export type LoginBody = z.infer<typeof loginSchema>;
 export type ForgotPasswordBody = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordBody = z.infer<typeof resetPasswordSchema>;
+export type UpdateProfileBody = z.infer<typeof updateProfileSchema>;

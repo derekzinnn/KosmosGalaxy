@@ -11,6 +11,7 @@ const USER = {
   status: 'ACTIVE' as const,
   tenantId: 't1',
   lastLoginAt: null,
+  avatarUrl: null,
 };
 
 function routes() {
