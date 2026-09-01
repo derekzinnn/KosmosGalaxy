@@ -212,7 +212,13 @@ function AuditRow({ entry }: { entry: AuditLogEntry }) {
   const hasDetails = entry.before != null || entry.after != null;
 
   return (
-    <li className="rounded-xl border border-border bg-card p-4 sm:p-5">
+    <li
+      className={`rounded-xl border p-4 sm:p-5 ${
+        tone === 'alert'
+          ? 'border-destructive/30 bg-destructive/[0.07]'
+          : 'border-border bg-card'
+      }`}
+    >
       <div className="flex items-start gap-3">
         <span className={`mt-1.5 size-2 shrink-0 rounded-full ${TONE_MARKER[tone]}`} aria-hidden />
 

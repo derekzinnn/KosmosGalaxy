@@ -4,8 +4,11 @@
  * surface); everything a person reads on the screen is translated here.
  *
  * A `tone` groups actions into how they should read at a glance: `alert` for
- * the two security events that deserve a red flag, `milestone` for a client
- * finishing something, `neutral` for everything routine.
+ * the events that deserve a red flag — security incidents (a reused token, a
+ * failed login, a staff override) and destructive acts (anything deleted, an
+ * invite revoked, a role changed, a client archived) — `milestone` for a client
+ * finishing something, `neutral` for everything routine. An `alert` row is
+ * tinted red in the viewer, not just marked, so it cannot blend into traffic.
  */
 export type AuditTone = 'neutral' | 'milestone' | 'alert';
 
@@ -19,23 +22,25 @@ const ACTION_LABELS: Readonly<Record<string, AuditActionLabel>> = {
   USER_LOGIN_FAILED: { label: 'Falha ao entrar', tone: 'alert' },
   USER_LOGGED_OUT: { label: 'Saiu da conta', tone: 'neutral' },
   USER_CREATED: { label: 'Usuário criado', tone: 'neutral' },
-  USER_ROLE_CHANGED: { label: 'Papel alterado', tone: 'neutral' },
+  USER_ROLE_CHANGED: { label: 'Papel alterado', tone: 'alert' },
   USER_SUSPENDED: { label: 'Usuário suspenso', tone: 'alert' },
   USER_REACTIVATED: { label: 'Usuário reativado', tone: 'neutral' },
 
   TENANT_CREATED: { label: 'Empresa criada', tone: 'neutral' },
   TENANT_UPDATED: { label: 'Empresa editada', tone: 'neutral' },
+  TENANT_ARCHIVED: { label: 'Cliente arquivado', tone: 'alert' },
+  TENANT_REACTIVATED: { label: 'Cliente reativado', tone: 'neutral' },
 
   INVITATION_SENT: { label: 'Convite enviado', tone: 'neutral' },
   INVITATION_ACCEPTED: { label: 'Convite aceito', tone: 'neutral' },
-  INVITATION_REVOKED: { label: 'Convite revogado', tone: 'neutral' },
+  INVITATION_REVOKED: { label: 'Convite revogado', tone: 'alert' },
 
   PASSWORD_RESET_REQUESTED: { label: 'Redefinição de senha pedida', tone: 'neutral' },
   PASSWORD_RESET_COMPLETED: { label: 'Senha redefinida', tone: 'neutral' },
 
   TRACK_CREATED: { label: 'Trilha criada', tone: 'neutral' },
   TRACK_UPDATED: { label: 'Trilha editada', tone: 'neutral' },
-  TRACK_DELETED: { label: 'Trilha excluída', tone: 'neutral' },
+  TRACK_DELETED: { label: 'Trilha excluída', tone: 'alert' },
   TRACK_PUBLISHED: { label: 'Trilha publicada', tone: 'neutral' },
   TRACK_UNPUBLISHED: { label: 'Trilha despublicada', tone: 'neutral' },
   TRACK_ASSIGNED: { label: 'Trilha atribuída', tone: 'neutral' },
@@ -43,16 +48,16 @@ const ACTION_LABELS: Readonly<Record<string, AuditActionLabel>> = {
 
   MODULE_CREATED: { label: 'Módulo criado', tone: 'neutral' },
   MODULE_UPDATED: { label: 'Módulo editado', tone: 'neutral' },
-  MODULE_DELETED: { label: 'Módulo excluído', tone: 'neutral' },
+  MODULE_DELETED: { label: 'Módulo excluído', tone: 'alert' },
   MODULES_REORDERED: { label: 'Módulos reordenados', tone: 'neutral' },
 
   LESSON_CREATED: { label: 'Aula criada', tone: 'neutral' },
   LESSON_UPDATED: { label: 'Aula editada', tone: 'neutral' },
-  LESSON_DELETED: { label: 'Aula excluída', tone: 'neutral' },
+  LESSON_DELETED: { label: 'Aula excluída', tone: 'alert' },
   LESSONS_REORDERED: { label: 'Aulas reordenadas', tone: 'neutral' },
 
   RESOURCE_CREATED: { label: 'Material adicionado', tone: 'neutral' },
-  RESOURCE_DELETED: { label: 'Material removido', tone: 'neutral' },
+  RESOURCE_DELETED: { label: 'Material removido', tone: 'alert' },
 
   LESSON_COMPLETED: { label: 'Aula concluída', tone: 'milestone' },
   TRACK_COMPLETED: { label: 'Trilha concluída', tone: 'milestone' },
