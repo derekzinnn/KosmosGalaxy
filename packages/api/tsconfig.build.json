@@ -3,7 +3,12 @@
   "compilerOptions": {
     "noEmit": false,
     "rootDir": "src",
-    "outDir": "dist"
+    "outDir": "dist",
+    // `.ts`-extension imports, rewritten to `.js` on emit — so the production
+    // build resolves the same specifiers dev/tsx does. Kept on the emitting
+    // build config only; dev and typecheck run --noEmit and don't need them.
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true
   },
   "include": ["src/**/*.ts"]
 }

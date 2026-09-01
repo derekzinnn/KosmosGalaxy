@@ -9,8 +9,6 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
-    "allowImportingTsExtensions": true,
-    "rewriteRelativeImportExtensions": true,
 
     /* Type safety. These are deliberately strict: this codebase handles
        authentication and tenant isolation, where a silently-undefined value
