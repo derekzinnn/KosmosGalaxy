@@ -129,7 +129,7 @@ override the codebase can perform.
 - **Writes must set the scalar foreign key.** A nested `connect` is invisible to
   the guard; the error message says so when it fires.
 
-### Four things Prisma 7 does that will bite you
+### Five things Prisma 7 does that will bite you
 
 - **Prisma promises are lazy.** `db.user.findFirst()` builds a promise and runs
   nothing until it is awaited. A scope callback that _returns_ a query instead
@@ -150,6 +150,14 @@ override the codebase can perform.
   server not running in UTC, every read is shifted by the local offset. Every
   `DateTime` in the schema therefore carries `@db.Timestamptz(3)`. **Add it to
   any new one**; the failure is silent, and mixes cleanly with correct data.
+- **`prisma migrate dev` hangs against Supabase.** It wants a shadow database to
+  diff against, and the connection role cannot create one, so it never returns.
+  Author migrations by hand instead: add the column to `schema.prisma`, write
+  `prisma/migrations/<timestamp>_<name>/migration.sql` yourself (make the DDL
+  idempotent — `ADD COLUMN IF NOT EXISTS` — since the test schema drifts), then
+  apply it with `npm run db:migrate` (`migrate deploy`, which needs no shadow
+  DB) and `prisma generate`. `db:migrate` uses `DATABASE_URL` from
+  `prisma.config.ts`. The `track_cover_image` migration is the worked example.
 
 ---
 
@@ -253,23 +261,23 @@ does not exist verifies against a throwaway hash so it takes just as long.
 
 ## API surface (Phase 0)
 
-| Method | Path                         | Access                   |
-| ------ | ---------------------------- | ------------------------ |
-| `GET`  | `/health`                    | Public                   |
-| `POST` | `/auth/login`                | Public, rate limited     |
-| `POST` | `/auth/refresh`              | Refresh cookie           |
-| `POST` | `/auth/logout`               | Refresh cookie           |
-| `GET`  | `/auth/me`                   | Authenticated            |
-| `POST` | `/auth/forgot-password`      | Public, rate limited     |
-| `POST` | `/auth/reset-password`       | Public, rate limited     |
-| `POST` | `/invitations`               | SUPERADMIN, CLIENT_OWNER |
-| `GET`  | `/invitations`               | SUPERADMIN, CLIENT_OWNER |
-| `GET`  | `/invitations/:token`        | Public                   |
-| `POST` | `/invitations/:token/accept` | Public                   |
-| `POST` | `/tenants`                   | SUPERADMIN               |
-| `GET`  | `/tenants`                   | Authenticated (scoped)   |
-| `GET`  | `/tenants/:id`               | Authenticated (scoped)   |
-| `PATCH`| `/tenants/:id`               | SUPERADMIN               |
+| Method  | Path                         | Access                   |
+| ------- | ---------------------------- | ------------------------ |
+| `GET`   | `/health`                    | Public                   |
+| `POST`  | `/auth/login`                | Public, rate limited     |
+| `POST`  | `/auth/refresh`              | Refresh cookie           |
+| `POST`  | `/auth/logout`               | Refresh cookie           |
+| `GET`   | `/auth/me`                   | Authenticated            |
+| `POST`  | `/auth/forgot-password`      | Public, rate limited     |
+| `POST`  | `/auth/reset-password`       | Public, rate limited     |
+| `POST`  | `/invitations`               | SUPERADMIN, CLIENT_OWNER |
+| `GET`   | `/invitations`               | SUPERADMIN, CLIENT_OWNER |
+| `GET`   | `/invitations/:token`        | Public                   |
+| `POST`  | `/invitations/:token/accept` | Public                   |
+| `POST`  | `/tenants`                   | SUPERADMIN               |
+| `GET`   | `/tenants`                   | Authenticated (scoped)   |
+| `GET`   | `/tenants/:id`               | Authenticated (scoped)   |
+| `PATCH` | `/tenants/:id`               | SUPERADMIN               |
 
 ### Added in Phase 2
 
@@ -290,13 +298,13 @@ the lesson exists, which is what somebody enumerating ids is trying to learn.
 
 ### Added in Phase 4
 
-| Method   | Path                  | Access     |
-| -------- | --------------------- | ---------- |
-| `GET`    | `/audit-logs`         | SUPERADMIN |
-| `GET`    | `/funnel`             | SUPERADMIN |
-| `POST`   | `/tracks/:id/cover`   | SUPERADMIN |
-| `DELETE` | `/tracks/:id/cover`   | SUPERADMIN |
-| `GET`    | `/clients/:tenantId`  | SUPERADMIN |
+| Method   | Path                 | Access     |
+| -------- | -------------------- | ---------- |
+| `GET`    | `/audit-logs`        | SUPERADMIN |
+| `GET`    | `/funnel`            | SUPERADMIN |
+| `POST`   | `/tracks/:id/cover`  | SUPERADMIN |
+| `DELETE` | `/tracks/:id/cover`  | SUPERADMIN |
+| `GET`    | `/clients/:tenantId` | SUPERADMIN |
 
 `/funnel` is the onboarding overview: every client's furthest stage (invited →
 joined → started → completed) plus the cumulative counts. Like the audit read
@@ -336,7 +344,6 @@ never `track.findMany`. The response is `{ tenant, members, tracks, progress }`
 where `progress` is a **sparse** matrix — only the (member, lesson) cells that
 have any progress — and the client fills the "not started" blanks, so the
 payload does not balloon to members × lessons.
-
 
 The read side of the audit ledger. **This one _is_ behind a role gate**, and
 that is the right question here: the log spans every client and records many
