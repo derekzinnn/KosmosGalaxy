@@ -100,6 +100,66 @@ export function updateTenant(
   });
 }
 
+/**
+ * Archiving a client — the reversible "remove". Kosmos staff only.
+ *
+ * The project does not erase history, so this suspends rather than deletes: the
+ * tenant's status becomes SUSPENDED, which locks its people out at login (see
+ * `auth.service`) while every assignment, every watched second and every audit
+ * row stays exactly where it was. `reactivateTenant` is the way back. A
+ * hard-delete was deliberately not built — a company's onboarding record is the
+ * kind of thing you regret losing, and nothing here needs it gone.
+ */
+export function archiveTenant(context: RequestContext, id: string): Promise<PublicTenant> {
+  return setTenantArchived(context, id, true);
+}
+
+export function reactivateTenant(context: RequestContext, id: string): Promise<PublicTenant> {
+  return setTenantArchived(context, id, false);
+}
+
+function setTenantArchived(
+  context: RequestContext,
+  id: string,
+  archived: boolean,
+): Promise<PublicTenant> {
+  const reason = archived ? 'superadmin:tenant-archive' : 'superadmin:tenant-reactivate';
+  return runInGlobalScope(reason, async (db) => {
+    const existing = await findTenantById(db, id);
+    if (!existing) throw new NotFoundError('Tenant not found', 'TENANT_NOT_FOUND');
+
+    // Reactivation restores ACTIVE, not the original ONBOARDING: a client being
+    // un-archived has already been onboarded far enough to have existed, and
+    // ACTIVE is the honest state to return them to.
+    const nextStatus = archived ? 'SUSPENDED' : 'ACTIVE';
+    if (existing.status === nextStatus) {
+      throw new ConflictError(
+        archived ? 'Tenant is already archived' : 'Tenant is not archived',
+        archived ? 'TENANT_ALREADY_ARCHIVED' : 'TENANT_NOT_ARCHIVED',
+      );
+    }
+
+    const tenant = await prisma.$transaction(async (tx) => {
+      const updated = await persistTenantUpdate(tx, id, { status: nextStatus });
+
+      await audit(tx, {
+        action: archived ? AuditAction.TENANT_ARCHIVED : AuditAction.TENANT_REACTIVATED,
+        actor: { id: context.userId, email: context.email, role: context.role },
+        tenantId: id,
+        entityType: AuditEntity.TENANT,
+        entityId: id,
+        before: { status: existing.status },
+        after: { status: updated.status },
+        request: metadataOf(context),
+      });
+
+      return updated;
+    });
+
+    return toPublicTenant(tenant);
+  });
+}
+
 export function listTenants(context: RequestContext): Promise<PublicTenant[]> {
   return runAsContext(context, async (db) => {
     const tenants = await selectTenants(db);

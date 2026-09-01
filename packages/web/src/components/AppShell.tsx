@@ -1,9 +1,11 @@
-import { LogOut } from 'lucide-react';
+import { ChevronDown, LogOut, UserRound } from 'lucide-react';
+import { useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '@/auth/useAuth';
 import { Logo } from '@/components/Logo';
+import { ProfileModal } from '@/components/ProfileModal';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 const ROLE_LABELS: Readonly<Record<string, string>> = {
   SUPERADMIN: 'Equipe Kosmos',
@@ -47,6 +49,8 @@ function initialsOf(name: string): string {
  */
 export function AppShell() {
   const { user, logout } = useAuth();
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -63,50 +67,85 @@ export function AppShell() {
       </a>
 
       <header className="sticky top-0 z-10 border-b border-border bg-card/80 backdrop-blur-sm">
-        <div className="mx-auto flex h-16 w-full max-w-5xl items-center justify-between gap-4 px-5">
-          <div className="flex min-w-0 items-center gap-6">
+        {/*
+          Three columns, not two: `1fr auto 1fr` pins the logo hard left and the
+          account cluster hard right while the nav sits dead centre, staying
+          centred no matter how wide either side grows.
+        */}
+        <div className="mx-auto grid h-16 w-full max-w-5xl grid-cols-[1fr_auto_1fr] items-center gap-4 px-5">
+          <div className="flex min-w-0 items-center justify-self-start">
             <Logo />
-
-            {user?.role === 'SUPERADMIN' ? (
-              <nav aria-label="Áreas da Kosmos" className="hidden gap-1 sm:flex">
-                <StaffLink to="/">Início</StaffLink>
-                <StaffLink to="/admin/funnel">Funil</StaffLink>
-                <StaffLink to="/admin/clients">Clientes</StaffLink>
-                <StaffLink to="/admin/tracks">Trilhas</StaffLink>
-                <StaffLink to="/admin/audit">Auditoria</StaffLink>
-              </nav>
-            ) : null}
           </div>
 
-          <div className="flex items-center gap-3">
-            <ThemeToggle className="hidden sm:inline-flex" />
+          {user?.role === 'SUPERADMIN' ? (
+            <nav aria-label="Áreas da Kosmos" className="hidden gap-1 justify-self-center sm:flex">
+              <StaffLink to="/">Início</StaffLink>
+              <StaffLink to="/admin/funnel">Funil</StaffLink>
+              <StaffLink to="/admin/clients">Clientes</StaffLink>
+              <StaffLink to="/admin/tracks">Trilhas</StaffLink>
+              <StaffLink to="/admin/audit">Auditoria</StaffLink>
+            </nav>
+          ) : (
+            <span />
+          )}
 
+          <div className="flex items-center justify-self-end">
             {user ? (
-              <div className="flex items-center gap-3">
-                <div className="hidden text-right sm:block">
-                  <p className="text-sm leading-tight font-medium">{user.name}</p>
-                  <p className="text-xs leading-tight text-muted-foreground">
-                    {ROLE_LABELS[user.role] ?? user.role}
-                  </p>
-                </div>
-                <span
-                  className="flex size-9 items-center justify-center rounded-full bg-accent text-xs font-semibold text-accent-foreground"
-                  aria-hidden
-                >
-                  {initialsOf(user.name)}
-                </span>
-              </div>
-            ) : null}
+              <Popover open={menuOpen} onOpenChange={setMenuOpen}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className="flex items-center gap-2.5 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring/60 sm:rounded-lg sm:py-1 sm:pr-2 sm:pl-2.5 sm:hover:bg-muted"
+                    aria-label="Conta"
+                  >
+                    <span className="hidden text-right sm:block">
+                      <span className="block text-sm leading-tight font-medium whitespace-nowrap">
+                        {user.name}
+                      </span>
+                      <span className="block text-xs leading-tight text-muted-foreground">
+                        {ROLE_LABELS[user.role] ?? user.role}
+                      </span>
+                    </span>
+                    <span className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-accent text-xs font-semibold text-accent-foreground">
+                      {user.avatarUrl ? (
+                        <img src={user.avatarUrl} alt="" className="size-full object-cover" />
+                      ) : (
+                        initialsOf(user.name)
+                      )}
+                    </span>
+                    <ChevronDown
+                      className="hidden size-4 text-muted-foreground sm:block"
+                      aria-hidden
+                    />
+                  </button>
+                </PopoverTrigger>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => void logout()}
-              aria-label="Sair da conta"
-              title="Sair"
-            >
-              <LogOut aria-hidden />
-            </Button>
+                <PopoverContent align="end" className="w-52 p-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      setProfileOpen(true);
+                    }}
+                    className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium outline-none hover:bg-muted focus-visible:bg-muted"
+                  >
+                    <UserRound className="size-4 text-muted-foreground" aria-hidden />
+                    Meu perfil
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      void logout();
+                    }}
+                    className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium text-destructive outline-none hover:bg-destructive/10 focus-visible:bg-destructive/10"
+                  >
+                    <LogOut className="size-4" aria-hidden />
+                    Sair da conta
+                  </button>
+                </PopoverContent>
+              </Popover>
+            ) : null}
           </div>
         </div>
       </header>
@@ -136,6 +175,8 @@ export function AppShell() {
           <ThemeToggle className="sm:hidden" />
         </div>
       </footer>
+
+      {user ? <ProfileModal open={profileOpen} onOpenChange={setProfileOpen} /> : null}
     </div>
   );
 }

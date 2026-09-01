@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 
-/** The banner's fixed shape and the size it is stored at. 5:2, matching the card. */
-const ASPECT = 5 / 2;
-const OUTPUT_WIDTH = 1280;
-const OUTPUT_HEIGHT = OUTPUT_WIDTH / ASPECT; // 512
+/** The banner's default shape. 5:2 matches the track card; callers override it. */
+const DEFAULT_ASPECT = 5 / 2;
+const DEFAULT_OUTPUT_WIDTH = 1280;
 const MAX_ZOOM = 4;
 
 interface Point {
@@ -13,14 +12,16 @@ interface Point {
 }
 
 /**
- * Pick which part of an image becomes the banner.
+ * Pick which part of an image becomes a stored image — a track banner (5:2) or,
+ * with `aspect={1}` and `rounded`, a square profile photo.
  *
- * A banner is always shown in a 5:2 box, so an image of any other shape would
- * be cropped by the browser wherever it happened to land — a face cut in half,
- * a logo off the edge. This lets the author choose the framing instead: pan and
- * zoom inside the 5:2 window, and what is inside it is what ships. The result is
- * drawn to a fixed 1280×512 canvas, so every stored banner has the exact shape
- * the card expects and a bounded size, whatever came in.
+ * The target box has a fixed shape, so an image of any other shape would be
+ * cropped by the browser wherever it happened to land — a face cut in half, a
+ * logo off the edge. This lets the person choose the framing instead: pan and
+ * zoom inside the window, and what is inside it is what ships. The result is
+ * drawn to a fixed `outputWidth × outputWidth/aspect` canvas, so every stored
+ * image has the exact shape its slot expects and a bounded size, whatever came
+ * in.
  *
  * The visible position is clamped at render time (never in an effect), so the
  * image always covers the window with no gaps and the maths has one source of
@@ -30,11 +31,26 @@ export function BannerCropper({
   file,
   onCancel,
   onApply,
+  aspect = DEFAULT_ASPECT,
+  outputWidth = DEFAULT_OUTPUT_WIDTH,
+  rounded = false,
+  hint = 'Arraste para reposicionar e use o controle para aproximar. A área dentro do quadro é o que vira o banner.',
 }: {
   file: File;
   onCancel: () => void;
   onApply: (cropped: File) => void;
+  /** Width ÷ height of the crop window and output. Default 5/2 (a banner). */
+  aspect?: number;
+  /** Output canvas width in pixels; height is derived from `aspect`. */
+  outputWidth?: number;
+  /** Show a circular mask over the window, for a profile photo. */
+  rounded?: boolean;
+  /** The instruction line above the window. */
+  hint?: string;
 }) {
+  const ASPECT = aspect;
+  const OUTPUT_WIDTH = outputWidth;
+  const OUTPUT_HEIGHT = Math.round(OUTPUT_WIDTH / ASPECT);
   const [url, setUrl] = useState<string | null>(null);
   const [natural, setNatural] = useState<{ w: number; h: number } | null>(null);
   const [frameWidth, setFrameWidth] = useState(0);
@@ -160,14 +176,16 @@ export function BannerCropper({
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-muted-foreground">
-        Arraste para reposicionar e use o controle para aproximar. A área dentro do quadro é o que
-        vira o banner.
-      </p>
+      <p className="text-xs text-muted-foreground">{hint}</p>
 
       <div
         ref={frameRef}
-        className="relative aspect-[5/2] w-full touch-none overflow-hidden rounded-lg border border-border bg-black select-none"
+        className="relative mx-auto w-full touch-none overflow-hidden border border-border bg-black select-none"
+        style={{
+          aspectRatio: String(ASPECT),
+          borderRadius: rounded ? '9999px' : '0.5rem',
+          maxWidth: rounded ? 280 : undefined,
+        }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}

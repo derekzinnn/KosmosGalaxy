@@ -14,6 +14,8 @@ import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { AddItemPopover } from '@/components/admin/AddItemPopover';
 import { LessonVideoModal } from '@/components/admin/LessonVideoModal';
+import { NewLessonModal } from '@/components/admin/NewLessonModal';
+import { RenamePopover } from '@/components/admin/RenamePopover';
 import { TrackBannerEditor } from '@/components/admin/TrackBannerEditor';
 import { ErrorState } from '@/components/states/ErrorState';
 import { FullPageLoader } from '@/components/states/FullPageLoader';
@@ -81,6 +83,12 @@ export function TrackEditorPage() {
     onError: fail,
   });
 
+  const renameTrack = useMutation({
+    mutationFn: (title: string) => contentApi.updateTrack(trackId, { title }),
+    onSuccess: refresh,
+    onError: fail,
+  });
+
   const removeTrack = useMutation({
     mutationFn: () => contentApi.deleteTrack(trackId),
     onSuccess: async () => {
@@ -125,6 +133,12 @@ export function TrackEditorPage() {
           <div className="min-w-0 space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-2xl font-semibold tracking-tight">{current.title}</h1>
+              <RenamePopover
+                value={current.title}
+                label="a trilha"
+                pending={renameTrack.isPending}
+                onSubmit={(title) => renameTrack.mutate(title)}
+              />
               {current.published ? (
                 <Badge variant="success">Publicada</Badge>
               ) : (
@@ -276,9 +290,27 @@ function ModuleCard({ module, index, total, trackId, onChanged, onError }: Modul
     onError,
   });
 
-  const addLesson = useMutation({
-    mutationFn: (title: string) => contentApi.createLesson(module.id, { title }),
+  const rename = useMutation({
+    mutationFn: (title: string) => contentApi.updateModule(module.id, { title }),
     onSuccess: onChanged,
+    onError,
+  });
+
+  const [addingLesson, setAddingLesson] = useState(false);
+
+  const addLesson = useMutation({
+    mutationFn: ({ title, video }: { title: string; video: LibraryVideo | null }) =>
+      contentApi.createLesson(module.id, {
+        title,
+        // A chosen video rides along in the same request; the real duration
+        // comes with it, so completion stays computable without a second trip.
+        externalVideoId: video?.id ?? null,
+        durationSeconds: video?.durationSeconds ?? null,
+      }),
+    onSuccess: async () => {
+      setAddingLesson(false);
+      await onChanged();
+    },
     onError,
   });
 
@@ -298,6 +330,12 @@ function ModuleCard({ module, index, total, trackId, onChanged, onError }: Modul
           </div>
 
           <div className="flex shrink-0 gap-1">
+            <RenamePopover
+              value={module.title}
+              label="o módulo"
+              pending={rename.isPending}
+              onSubmit={(title) => rename.mutate(title)}
+            />
             <Button
               variant="ghost"
               size="icon"
@@ -350,13 +388,16 @@ function ModuleCard({ module, index, total, trackId, onChanged, onError }: Modul
             </ol>
           )}
 
-          <AddItemPopover
-            label="Adicionar aula"
-            placeholder="Nome da aula"
-            small
-            fullWidth
+          <Button variant="outline" className="w-full" onClick={() => setAddingLesson(true)}>
+            <Plus aria-hidden />
+            Adicionar aula
+          </Button>
+
+          <NewLessonModal
+            open={addingLesson}
+            onOpenChange={setAddingLesson}
             pending={addLesson.isPending}
-            onSubmit={(value) => addLesson.mutate(value)}
+            onCreate={(input) => addLesson.mutate(input)}
           />
         </div>
       </Card>
@@ -432,6 +473,12 @@ function LessonRow({
     onError,
   });
 
+  const rename = useMutation({
+    mutationFn: (title: string) => contentApi.updateLesson(lesson.id, { title }),
+    onSuccess: onChanged,
+    onError,
+  });
+
   return (
     <li className="rounded-lg border border-border bg-muted/30 p-3">
       <div className="flex items-start gap-3">
@@ -455,6 +502,12 @@ function LessonRow({
         </div>
 
         <div className="flex shrink-0 gap-1">
+          <RenamePopover
+            value={lesson.title}
+            label="a aula"
+            pending={rename.isPending}
+            onSubmit={(title) => rename.mutate(title)}
+          />
           <Button
             variant="ghost"
             size="icon"

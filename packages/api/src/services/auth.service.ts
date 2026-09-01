@@ -82,6 +82,18 @@ export async function login(
       throw invalidCredentials();
     }
 
+    // An archived client locks out everyone who belongs to it, without touching
+    // each person's own status — so reactivating the client restores exactly
+    // the people who were active before, and a per-user suspension survives.
+    // Staff have no tenant, so this never applies to them.
+    if (user.tenantId) {
+      const tenant = await db.tenant.findFirst({ where: { id: user.tenantId } });
+      if (!tenant || tenant.status === 'SUSPENDED') {
+        await recordFailedLogin(email, user, request, 'tenant_suspended');
+        throw invalidCredentials();
+      }
+    }
+
     return issueSession(db, user, request, { isFreshLogin: true });
   });
 }

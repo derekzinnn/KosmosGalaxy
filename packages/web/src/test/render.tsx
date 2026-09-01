@@ -20,6 +20,7 @@ export function renderWithProviders(
     login: () => Promise.resolve(),
     logout: () => Promise.resolve(),
     adoptSession: () => undefined,
+    updateUser: () => undefined,
     ...auth,
   };
 

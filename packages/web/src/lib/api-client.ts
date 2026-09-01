@@ -42,6 +42,7 @@ export interface AuthenticatedUser {
   status: 'ACTIVE' | 'SUSPENDED';
   tenantId: string | null;
   lastLoginAt: string | null;
+  avatarUrl: string | null;
 }
 
 interface RequestOptions {
@@ -206,6 +207,19 @@ export const authApi = {
   logout: () => request<void>('/auth/logout', { method: 'POST', skipRefresh: true }),
 
   me: () => request<{ user: AuthenticatedUser }>('/auth/me'),
+
+  updateProfile: (name: string) =>
+    request<{ user: AuthenticatedUser }>('/auth/me', { method: 'PATCH', body: { name } }),
+
+  uploadAvatar: (file: File) =>
+    request<{ user: AuthenticatedUser }>('/auth/me/avatar', {
+      method: 'POST',
+      rawBody: file,
+      rawContentType: file.type,
+    }),
+
+  removeAvatar: () =>
+    request<{ user: AuthenticatedUser }>('/auth/me/avatar', { method: 'DELETE' }),
 
   forgotPassword: (email: string) =>
     request<{ message: string }>('/auth/forgot-password', {

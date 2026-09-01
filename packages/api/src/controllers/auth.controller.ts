@@ -1,7 +1,12 @@
 import type { Request, Response } from 'express';
 import { clearRefreshCookie, REFRESH_COOKIE_NAME, setRefreshCookie } from '../lib/cookies.js';
 import { requireContext } from '../middleware/authenticate.js';
-import type { ForgotPasswordBody, LoginBody, ResetPasswordBody } from '../schemas/auth.schemas.js';
+import type {
+  ForgotPasswordBody,
+  LoginBody,
+  ResetPasswordBody,
+  UpdateProfileBody,
+} from '../schemas/auth.schemas.js';
 import type { AuthSession } from '../services/auth.service.js';
 import {
   currentUser,
@@ -11,6 +16,7 @@ import {
   requestPasswordReset,
   resetPassword,
 } from '../services/auth.service.js';
+import { removeOwnAvatar, setOwnAvatar, updateOwnProfile } from '../services/profile.service.js';
 
 /**
  * Controllers do three things and nothing else: read the request, call one
@@ -70,6 +76,21 @@ export async function logoutHandler(req: Request, res: Response): Promise<void> 
 
 export async function meHandler(req: Request, res: Response): Promise<void> {
   res.json({ user: await currentUser(requireContext(req)) });
+}
+
+export async function updateProfileHandler(req: Request, res: Response): Promise<void> {
+  const body = req.body as UpdateProfileBody;
+  res.json({ user: await updateOwnProfile(requireContext(req), { name: body.name }) });
+}
+
+export async function setAvatarHandler(req: Request, res: Response): Promise<void> {
+  const contentType = req.headers['content-type'] ?? '';
+  const user = await setOwnAvatar(requireContext(req), req.body as Buffer, contentType);
+  res.json({ user });
+}
+
+export async function removeAvatarHandler(req: Request, res: Response): Promise<void> {
+  res.json({ user: await removeOwnAvatar(requireContext(req)) });
 }
 
 export async function forgotPasswordHandler(req: Request, res: Response): Promise<void> {

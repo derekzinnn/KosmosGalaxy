@@ -72,6 +72,10 @@ model User {
   name         String
   role         Role
   status       UserStatus @default(ACTIVE)
+  /// Object path of the avatar image inside the storage bucket, e.g.
+  /// `avatars/<userId>-<uuid>.jpg`. Null falls back to the initials chip. Only
+  /// the path is stored; the public URL is derived in the mapper.
+  avatarImagePath String? @map("avatar_image_path")
   lastLoginAt  DateTime?  @map("last_login_at") @db.Timestamptz(3)
   createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt    DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)

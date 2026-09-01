@@ -1,8 +1,10 @@
 import { Router } from 'express';
 import {
+  archiveTenantHandler,
   createTenantHandler,
   getTenantHandler,
   listTenantsHandler,
+  reactivateTenantHandler,
   updateTenantHandler,
 } from '../controllers/tenant.controller.js';
 import { authenticate } from '../middleware/authenticate.js';
@@ -35,3 +37,8 @@ tenantRouter.patch(
   validateBody(updateTenantSchema),
   updateTenantHandler,
 );
+
+// Archive (the reversible "remove") and its undo. No body — the id is the whole
+// request — so no validateBody. SUPERADMIN only, like every other write here.
+tenantRouter.post('/:id/archive', requireRole('SUPERADMIN'), archiveTenantHandler);
+tenantRouter.post('/:id/reactivate', requireRole('SUPERADMIN'), reactivateTenantHandler);
