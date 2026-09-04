@@ -49,6 +49,6 @@ export async function verifyPassword(passwordHash: string, plainText: string): P
 let dummyHashPromise: Promise<string> | undefined;
 
 export async function wasteTimeLikeARealVerification(): Promise<void> {
-  dummyHashPromise ??= hash('kosmos-galaxy-timing-equaliser', HASH_OPTIONS);
+  dummyHashPromise ??= hash('universo-kosmos-timing-equaliser', HASH_OPTIONS);
   await verifyPassword(await dummyHashPromise, 'not-the-password');
 }

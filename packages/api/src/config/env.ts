@@ -44,7 +44,7 @@ const envSchema = z
     TRUST_PROXY: z.coerce.number().int().min(0).default(0),
 
     EMAIL_PROVIDER: z.enum(['console']).default('console'),
-    EMAIL_FROM: z.string().min(1).default('Kosmos Galaxy <nao-responda@kosmosgalaxy.com.br>'),
+    EMAIL_FROM: z.string().min(1).default('Universo Kosmos <nao-responda@kosmosgalaxy.com.br>'),
 
     VIDEO_PROVIDER: z.enum(['fake', 'panda']).default('fake'),
     PANDA_API_KEY: z.string().min(1).optional(),

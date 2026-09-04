@@ -31,7 +31,7 @@ function envOr(name: string, fallback: string): string {
 
 async function main(): Promise<void> {
   const email = normalizeEmail(envOr('SEED_ADMIN_EMAIL', 'admin@kosmos.com.br'));
-  const password = envOr('SEED_ADMIN_PASSWORD', 'kosmos-galaxy-dev-password');
+  const password = envOr('SEED_ADMIN_PASSWORD', 'universo-kosmos-dev-password');
   const name = envOr('SEED_ADMIN_NAME', 'Kosmos Admin');
   const explicitPassword = Boolean(process.env.SEED_ADMIN_PASSWORD?.trim());
 

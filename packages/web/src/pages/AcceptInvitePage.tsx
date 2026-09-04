@@ -77,7 +77,7 @@ export function AcceptInvitePage() {
   return (
     <AuthLayout
       title={`Bem-vindo à ${invitation.tenantName}`}
-      description="Crie sua senha para acessar o Kosmos Galaxy e começar seu onboarding."
+      description="Crie sua senha para acessar o Universo Kosmos e começar seu onboarding."
       footer={
         <Link to="/login" className="text-muted-foreground hover:text-foreground">
           Já tenho uma conta

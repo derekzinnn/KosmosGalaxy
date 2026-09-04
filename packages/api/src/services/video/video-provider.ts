@@ -46,7 +46,7 @@ export interface SignedPlayback {
 }
 
 /**
- * How Kosmos Galaxy plays video.
+ * How Universo Kosmos plays video.
  *
  * The application never talks to a video vendor directly, for the same reason
  * it never talks to a mail vendor directly: the choice is a product decision

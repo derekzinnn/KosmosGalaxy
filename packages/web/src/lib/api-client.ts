@@ -100,7 +100,7 @@ async function parseError(response: Response): Promise<ApiError> {
  * server: reuse detection stays strict, and a genuinely replayed token is
  * still treated as theft.
  */
-const REFRESH_LOCK = 'kosmos-galaxy:refresh';
+const REFRESH_LOCK = 'universo-kosmos:refresh';
 
 let refreshInFlight: Promise<SessionResponse | null> | null = null;
 
