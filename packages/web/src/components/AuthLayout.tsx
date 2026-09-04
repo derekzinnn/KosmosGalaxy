@@ -1,4 +1,5 @@
 import { Logo } from '@/components/Logo';
+import { RocketFlyby } from '@/components/RocketFlyby';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
 interface AuthLayoutProps {
@@ -27,23 +28,25 @@ export function AuthLayout({ title, description, children, footer }: AuthLayoutP
     <div className="flex min-h-dvh flex-col lg:flex-row">
       {/* ── Brand, desktop only ──────────────────────────────────────── */}
       <aside className="auth-backdrop relative hidden overflow-hidden border-r border-border lg:flex lg:w-[44%] lg:max-w-2xl lg:flex-col lg:justify-between lg:p-12">
-        <OrbitMotif />
+        {/* A rocket drifts across the background, behind everything. */}
+        <RocketFlyby />
 
         <div className="relative">
           <Logo />
         </div>
 
-        <div className="relative max-w-md space-y-4">
-          <h2 className="text-3xl leading-tight font-semibold tracking-tight text-balance">
+        <div className="relative max-w-md space-y-3">
+          <h2 className="font-display text-[1.75rem] leading-tight font-bold tracking-tight text-balance">
             Seu onboarding com a Kosmos, do começo ao fim.
           </h2>
-          <p className="text-sm leading-relaxed text-muted-foreground">
+          <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
             Suas trilhas, suas aulas e seu progresso em um só lugar. Avance no seu ritmo — a gente
             acompanha junto.
           </p>
+          <p className="pt-2 text-xs tracking-wide text-muted-foreground/70">
+            Kosmos Inteligência Digital
+          </p>
         </div>
-
-        <p className="relative text-xs text-muted-foreground">Kosmos Inteligência Digital</p>
       </aside>
 
       {/* ── The form ─────────────────────────────────────────────────── */}
@@ -72,42 +75,3 @@ export function AuthLayout({ title, description, children, footer }: AuthLayoutP
   );
 }
 
-/**
- * Three orbits, echoing the mark, drawn very faintly.
- *
- * Atmosphere rather than decoration — at this opacity it registers as texture
- * before anyone consciously sees a shape, which is the point. `aria-hidden`
- * because there is nothing here to describe.
- */
-function OrbitMotif() {
-  return (
-    <svg
-      className="pointer-events-none absolute -right-24 -bottom-24 size-[34rem] text-primary opacity-[0.07]"
-      viewBox="0 0 200 200"
-      fill="none"
-      aria-hidden
-      focusable="false"
-    >
-      <ellipse
-        cx="100"
-        cy="100"
-        rx="92"
-        ry="38"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        transform="rotate(-24 100 100)"
-      />
-      <ellipse
-        cx="100"
-        cy="100"
-        rx="72"
-        ry="30"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        transform="rotate(18 100 100)"
-      />
-      <circle cx="100" cy="100" r="52" stroke="currentColor" strokeWidth="1.5" />
-      <circle cx="100" cy="100" r="14" fill="currentColor" />
-    </svg>
-  );
-}

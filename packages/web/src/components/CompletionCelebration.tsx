@@ -20,7 +20,7 @@ const PARTICLES = Array.from({ length: 18 }, (_, index) => {
   return {
     tx: Math.cos(angle) * distance,
     ty: Math.sin(angle) * distance,
-    hue: 250 + ((index * 9) % 70),
+    hue: 250 + ((index * 6) % 34),
     delay: (index % 5) * 24,
   };
 });

@@ -7,9 +7,9 @@
  * always the same constellation and the same hue, distinct from its neighbours,
  * and unmistakably part of this product rather than any other.
  *
- * The hue stays on the indigo→violet→blue arc so the covers read as a family,
- * never a rainbow. It is the one place colour is spent freely; everything
- * around it stays quiet.
+ * The hue stays on the Kosmos-blue arc so the covers read as a family, never a
+ * rainbow. It is the one place colour is spent freely; everything around it
+ * stays quiet.
  */
 export function TrackCover({
   seed,
@@ -84,7 +84,7 @@ function hashOf(seed: string): number {
   return hash;
 }
 
-/** On the indigo→violet→blue arc (230–320), so covers stay a family. */
+/** On the Kosmos-blue arc (240–284), so covers stay a family. */
 function hueFromSeed(seed: string): number {
-  return 230 + (hashOf(seed) % 90);
+  return 240 + (hashOf(seed) % 44);
 }
