@@ -9,8 +9,8 @@ import { funnelApi, type Funnel, type FunnelClient, type FunnelStage } from '@/l
 
 const STAGE: Readonly<Record<FunnelStage, { label: string; color: string }>> = {
   invited: { label: 'Convidado', color: 'oklch(0.62 0.02 260)' },
-  joined: { label: 'Entrou', color: 'oklch(0.60 0.13 250)' },
-  started: { label: 'Em andamento', color: 'oklch(0.58 0.16 293)' },
+  joined: { label: 'Entrou', color: 'oklch(0.64 0.11 256)' },
+  started: { label: 'Em andamento', color: 'oklch(0.52 0.18 264)' },
   completed: { label: 'Concluído', color: 'oklch(0.62 0.15 155)' },
 };
 

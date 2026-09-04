@@ -8,7 +8,7 @@ const app = createApp();
 const server = app.listen(env.PORT, () => {
   logger.info(
     { port: env.PORT, environment: env.NODE_ENV, webAppUrl: env.WEB_APP_URL },
-    'Kosmos Galaxy API is listening',
+    'Universo Kosmos API is listening',
   );
 });
 

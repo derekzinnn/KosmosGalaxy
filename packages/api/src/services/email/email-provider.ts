@@ -6,7 +6,7 @@ export interface EmailMessage {
 }
 
 /**
- * How Kosmos Galaxy sends email.
+ * How Universo Kosmos sends email.
  *
  * The application never talks to a mail vendor directly. It talks to this
  * interface, so choosing Resend or SES or Postmark later is one new file and

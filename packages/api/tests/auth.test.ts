@@ -179,8 +179,8 @@ describe('authentication', () => {
       const forged = await new SignJWT({ email: fixture.owner.email, role: 'SUPERADMIN' })
         .setProtectedHeader({ alg: 'HS256' })
         .setSubject(fixture.owner.id)
-        .setIssuer('kosmos-galaxy')
-        .setAudience('kosmos-galaxy-web')
+        .setIssuer('universo-kosmos')
+        .setAudience('universo-kosmos-web')
         .setExpirationTime('15m')
         .sign(new TextEncoder().encode('a'.repeat(48)));
 

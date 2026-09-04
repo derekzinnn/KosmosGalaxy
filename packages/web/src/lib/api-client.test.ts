@@ -67,8 +67,8 @@ describe('refresh serialisation', () => {
 
     await authApi.restore();
 
-    expect(locks.request).toHaveBeenCalledWith('kosmos-galaxy:refresh', expect.any(Function));
-    expect(order).toEqual(['acquire:kosmos-galaxy:refresh', 'release:kosmos-galaxy:refresh']);
+    expect(locks.request).toHaveBeenCalledWith('universo-kosmos:refresh', expect.any(Function));
+    expect(order).toEqual(['acquire:universo-kosmos:refresh', 'release:universo-kosmos:refresh']);
   });
 
   it('starts a fresh rotation once the previous one has settled', async () => {

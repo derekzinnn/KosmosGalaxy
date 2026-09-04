@@ -13,8 +13,8 @@ import { UnauthorizedError } from './errors.js';
  * (sessions) lives in the database as a refresh token instead.
  */
 const secret = new TextEncoder().encode(env.JWT_SECRET);
-const ISSUER = 'kosmos-galaxy';
-const AUDIENCE = 'kosmos-galaxy-web';
+const ISSUER = 'universo-kosmos';
+const AUDIENCE = 'universo-kosmos-web';
 const ALGORITHM = 'HS256';
 
 export interface AccessTokenClaims {

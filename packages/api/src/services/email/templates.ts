@@ -18,11 +18,11 @@ interface InvitationEmailInput {
 export function invitationEmail(input: InvitationEmailInput): EmailMessage {
   return {
     to: input.to,
-    subject: `Seu acesso ao Kosmos Galaxy está pronto`,
+    subject: `Seu acesso ao Universo Kosmos está pronto`,
     text: [
       `Olá!`,
       ``,
-      `${input.inviterName} convidou você para acessar o Kosmos Galaxy, a plataforma`,
+      `${input.inviterName} convidou você para acessar o Universo Kosmos, a plataforma`,
       `de onboarding da Kosmos, em nome de ${input.tenantName}.`,
       ``,
       `Para criar sua senha e começar, acesse:`,
@@ -46,9 +46,9 @@ interface PasswordResetEmailInput {
 export function passwordResetEmail(input: PasswordResetEmailInput): EmailMessage {
   return {
     to: input.to,
-    subject: `Redefinição de senha — Kosmos Galaxy`,
+    subject: `Redefinição de senha — Universo Kosmos`,
     text: [
-      `Recebemos um pedido para redefinir a senha da sua conta no Kosmos Galaxy.`,
+      `Recebemos um pedido para redefinir a senha da sua conta no Universo Kosmos.`,
       ``,
       `Para escolher uma nova senha, acesse:`,
       ``,

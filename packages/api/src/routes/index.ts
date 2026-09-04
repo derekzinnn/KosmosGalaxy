@@ -11,7 +11,7 @@ import { videoRouter } from './video.routes.js';
 export const apiRouter: Router = Router();
 
 apiRouter.get('/health', (_req, res) => {
-  res.json({ status: 'ok', service: 'kosmos-galaxy-api' });
+  res.json({ status: 'ok', service: 'universo-kosmos-api' });
 });
 
 apiRouter.use('/auth', authRouter);

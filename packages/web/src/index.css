@@ -1,10 +1,14 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
-@import '@fontsource-variable/inter';
+/* The Kosmos brand faces: Quicksand for display, Montserrat for body. Both are
+   variable fonts, so one file each carries every weight we use (Quicksand Bold
+   for headings, Montserrat Light for text). */
+@import '@fontsource-variable/quicksand';
+@import '@fontsource-variable/montserrat';
 
 /*
  * ═══════════════════════════════════════════════════════════════════════════
- *  Kosmos Galaxy — design tokens
+ *  Universo Kosmos — design tokens
  *
  *  Everything visual in this product resolves to a value defined here.
  *  Components never hard-code a colour, a radius or a shadow, so the whole
@@ -21,72 +25,76 @@
 
 :root {
   /* ── Surfaces ────────────────────────────────────────────────────────── */
-  --background: oklch(0.994 0.002 264);
-  --foreground: oklch(0.21 0.015 264);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.21 0.015 264);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.21 0.015 264);
+  --background: #fafbfd;
+  --foreground: #0a0a0b;
+  --card: #ffffff;
+  --card-foreground: #0a0a0b;
+  --popover: #ffffff;
+  --popover-foreground: #0a0a0b;
 
   /*
-   * The one accent. A deep indigo that reads as "Kosmos" without shouting.
-   * If it appears more than twice on a screen, the screen is too busy.
+   * The primary is monochrome — near-black — so the main actions read as black
+   * on white. Kosmos blue is not the workhorse colour; it is reserved for
+   * details that must be noticed (see --accent, --ring). Black first, blue only
+   * where it earns attention.
    */
-  --primary: oklch(0.53 0.2 274);
-  --primary-foreground: oklch(0.99 0.002 264);
+  --primary: #0a0a0b;
+  --primary-foreground: #ffffff;
 
-  --secondary: oklch(0.968 0.004 264);
-  --secondary-foreground: oklch(0.28 0.015 264);
+  --secondary: #eef1f6;
+  --secondary-foreground: #1a1a1c;
 
-  --muted: oklch(0.968 0.004 264);
-  --muted-foreground: oklch(0.53 0.015 264);
+  --muted: #f1f3f7;
+  --muted-foreground: #5b6472;
 
-  --accent: oklch(0.96 0.012 274);
-  --accent-foreground: oklch(0.35 0.09 274);
+  /* The brand's light blue, for tinted surfaces and selected states. */
+  --accent: #cfe0f8;
+  --accent-foreground: #0140bf;
 
   --destructive: oklch(0.58 0.21 27);
-  --destructive-foreground: oklch(0.99 0.002 264);
+  --destructive-foreground: #ffffff;
 
   --success: oklch(0.62 0.14 152);
-  --success-foreground: oklch(0.99 0.002 264);
+  --success-foreground: #ffffff;
 
-  --border: oklch(0.922 0.006 264);
-  --input: oklch(0.922 0.006 264);
-  --ring: oklch(0.53 0.2 274);
+  --border: #e6e6e6;
+  --input: #e6e6e6;
+  --ring: #0140bf;
 
   /* ── Shape ───────────────────────────────────────────────────────────── */
   --radius: 0.625rem;
 }
 
 .dark {
-  --background: oklch(0.17 0.012 264);
-  --foreground: oklch(0.96 0.004 264);
-  --card: oklch(0.21 0.014 264);
-  --card-foreground: oklch(0.96 0.004 264);
-  --popover: oklch(0.21 0.014 264);
-  --popover-foreground: oklch(0.96 0.004 264);
+  --background: #0b0d12;
+  --foreground: #eceef3;
+  --card: #12151c;
+  --card-foreground: #eceef3;
+  --popover: #12151c;
+  --popover-foreground: #eceef3;
 
-  --primary: oklch(0.7 0.16 274);
-  --primary-foreground: oklch(0.17 0.012 264);
+  /* Monochrome primary on dark: near-white actions on the dark ground. */
+  --primary: #f4f6f8;
+  --primary-foreground: #0b0d12;
 
-  --secondary: oklch(0.26 0.014 264);
-  --secondary-foreground: oklch(0.96 0.004 264);
+  --secondary: #1b2029;
+  --secondary-foreground: #eceef3;
 
-  --muted: oklch(0.26 0.014 264);
-  --muted-foreground: oklch(0.7 0.014 264);
+  --muted: #1b2029;
+  --muted-foreground: #9aa4b3;
 
-  --accent: oklch(0.28 0.03 274);
-  --accent-foreground: oklch(0.88 0.06 274);
+  --accent: #1d2a44;
+  --accent-foreground: #cfe0f8;
 
   --destructive: oklch(0.65 0.19 27);
-  --destructive-foreground: oklch(0.17 0.012 264);
+  --destructive-foreground: #0b0d12;
 
   --success: oklch(0.7 0.14 152);
-  --success-foreground: oklch(0.17 0.012 264);
+  --success-foreground: #0b0d12;
 
-  --border: oklch(0.3 0.014 264);
-  --input: oklch(0.32 0.014 264);
-  --ring: oklch(0.7 0.16 274);
+  --border: #272c36;
+  --input: #2a303b;
+  --ring: #5b87e8;
 }
 
 @theme inline {
@@ -112,7 +120,9 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-sans:
+    'Montserrat Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Quicksand Variable', var(--font-sans);
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -127,10 +137,22 @@
 
   body {
     @apply bg-background font-sans text-foreground antialiased;
-    /* Inter's default figures are proportional; tabular ones stop numbers
-       jittering as progress counters tick upward in later phases. */
-    font-feature-settings: 'cv11', 'ss01';
+    /* Montserrat Light — the brand's text weight. */
+    font-weight: 300;
     text-rendering: optimizeLegibility;
+  }
+
+  /*
+   * Headings wear Quicksand, the brand's display face, at its Bold weight — the
+   * one place the wordmark's personality carries into the interface. Body copy
+   * stays Montserrat.
+   */
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    font-weight: 700;
   }
 
   /*
@@ -154,7 +176,7 @@
   .auth-backdrop {
     background-image:
       radial-gradient(60rem 40rem at 50% -10%, var(--accent), transparent 60%),
-      radial-gradient(40rem 30rem at 110% 10%, oklch(0.95 0.03 300 / 0.5), transparent 65%);
+      radial-gradient(40rem 30rem at 110% 10%, color-mix(in srgb, var(--primary) 14%, transparent), transparent 65%);
   }
 }
 
@@ -204,7 +226,43 @@
   }
 }
 
+/*
+ * A single rocket drifting across the login background, corner to corner. Pure
+ * atmosphere: it crosses in a few seconds, then waits off-screen before the
+ * next pass. `motion-reduce` hides it entirely.
+ */
+@keyframes uk-fly {
+  0% {
+    transform: translate(-12vw, 12vh) rotate(45deg);
+    opacity: 0;
+  }
+  6% {
+    opacity: 0.8;
+  }
+  38% {
+    opacity: 0.8;
+  }
+  44% {
+    transform: translate(52vw, -112vh) rotate(45deg);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(52vw, -112vh) rotate(45deg);
+    opacity: 0;
+  }
+}
+
 @layer components {
+  .uk-fly {
+    animation: uk-fly 6s ease-in-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .uk-fly {
+      animation: none;
+      opacity: 0;
+    }
+  }
+
   .kosmos-burst-particle {
     position: absolute;
     top: 50%;
@@ -223,7 +281,7 @@
     margin-top: -2.5rem;
     margin-left: -2.5rem;
     border-radius: 9999px;
-    border: 2px solid var(--primary);
+    border: 2px solid var(--ring);
     animation: kosmos-ring 900ms ease-out forwards;
   }
   .kosmos-burst-check {

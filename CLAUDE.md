@@ -1,4 +1,4 @@
-# Kosmos Galaxy
+# Universo Kosmos
 
 Client onboarding platform for **Kosmos Inteligência Digital**.
 

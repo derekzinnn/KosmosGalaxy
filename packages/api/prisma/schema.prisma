@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════
-//  Kosmos Galaxy — Phase 0 Prisma schema
+//  Universo Kosmos — Phase 0 Prisma schema
 //
 //  Conventions
 //  - Tables are snake_case + plural; columns snake_case (@map / @@map).
